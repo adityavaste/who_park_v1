@@ -1,14 +1,10 @@
 // src/app/api/alerts/trigger/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { qrTags, alertLogs, vehicles, users } from '@/db/schema';
+import { qrTags, alertLogs, vehicles, users, pushSubscriptions } from '@/db/schema';
 import { eq, and, gte, or, desc } from 'drizzle-orm';
 import crypto from 'crypto';
-
-
-// Add at top of src/app/api/alerts/trigger/route.ts
-import webpush from 'web-push';
-import { pushSubscriptions } from '@/db/schema';
+import * as webpush from 'web-push';
 
 if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
@@ -35,6 +31,7 @@ export async function POST(req: NextRequest) {
       .select({
         tagId: qrTags.id,
         isEnabled: qrTags.isEnabled,
+        userId: vehicles.userId,
         plateNumber: vehicles.plateNumber,
         ownerPhone: users.phone,
       })
@@ -51,7 +48,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { tagId } = tagData[0];
+    const { tagId, userId, plateNumber } = tagData[0];
 
     // 2. Identify the scanner via IP + anonymous visitor cookie
     const forwarded = req.headers.get('x-forwarded-for');
@@ -64,10 +61,8 @@ export async function POST(req: NextRequest) {
       isNewVisitorCookie = true;
     }
 
-    // Store combined fingerprint in scannerIp (fits cleanly within varchar(45))
     const scannerFingerprint = `${rawIp.slice(0, 26)}|${visitorId}`;
 
-    // Match either the exact IP or the same browser visitor cookie
     const samePersonCondition = or(
       eq(alertLogs.scannerIp, scannerFingerprint),
       eq(alertLogs.scannerIp, rawIp)
@@ -138,36 +133,12 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
-    const response = NextResponse.json({
-      success: true,
-      message: 'Driver notified!',
-      alertId: newLog.id,
-      cooldownSeconds: 300, // 5 minutes
-      remainingDailyPings: 10 - (dailyPings.length + 1),
-    });
-
-    if (isNewVisitorCookie) {
-      response.cookies.set('honksafe_visitor_id', visitorId, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 30 * 24 * 60 * 60,
-      });
-    }
-// Fetch userId for this vehicle
-    const [ownerRecord] = await db
-      .select({ userId: vehicles.userId, plateNumber: vehicles.plateNumber })
-      .from(qrTags)
-      .innerJoin(vehicles, eq(qrTags.vehicleId, vehicles.id))
-      .where(eq(qrTags.id, tagId))
-      .limit(1);
-
-    if (ownerRecord && process.env.VAPID_PRIVATE_KEY) {
+    // 6. Send Background Web Push Notifications to all registered owner devices
+    if (process.env.VAPID_PRIVATE_KEY && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
       const subs = await db
         .select()
         .from(pushSubscriptions)
-        .where(eq(pushSubscriptions.userId, ownerRecord.userId));
+        .where(eq(pushSubscriptions.userId, userId));
 
       const alertLabel =
         alertType === 'OBSTRUCTION'
@@ -177,7 +148,7 @@ export async function POST(req: NextRequest) {
           : '🚨 Urgent Tow / Emergency alert!';
 
       const payload = JSON.stringify({
-        title: `🚨 ALERT: ${ownerRecord.plateNumber}`,
+        title: `🚨 ALERT: ${plateNumber}`,
         body: `${alertLabel} Tap to reply.`,
         url: '/dashboard',
       });
@@ -194,6 +165,25 @@ export async function POST(req: NextRequest) {
         )
       );
     }
+
+    const response = NextResponse.json({
+      success: true,
+      message: 'Driver notified!',
+      alertId: newLog.id,
+      cooldownSeconds: 300,
+      remainingDailyPings: 10 - (dailyPings.length + 1),
+    });
+
+    if (isNewVisitorCookie) {
+      response.cookies.set('honksafe_visitor_id', visitorId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 30 * 24 * 60 * 60,
+      });
+    }
+
     return response;
   } catch (error: any) {
     return NextResponse.json(
