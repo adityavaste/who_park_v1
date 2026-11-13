@@ -43,19 +43,44 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
       setCameraError(null);
       setTorchOn(false);
 
+      // Check for insecure HTTP origin (e.g., testing via 192.168.x.x on phone)
+      if (
+        typeof window !== 'undefined' &&
+        window.location.protocol !== 'https:' &&
+        window.location.hostname !== 'localhost' &&
+        window.location.hostname !== '127.0.0.1'
+      ) {
+        setIsStarting(false);
+        setCameraError(
+          'Browser blocked camera because this page is on HTTP, not HTTPS. Use localhost, ngrok, or upload a QR photo below.'
+        );
+        return;
+      }
+
       try {
         await new Promise((r) => setTimeout(r, 150));
         if (!isMounted) return;
+
+        // Enumerate cameras so laptops and phones both work seamlessly
+        const devices = await Html5Qrcode.getCameras();
+        if (!devices || devices.length === 0) {
+          throw new Error('No camera hardware detected on this device.');
+        }
+
+        // Prefer back/environment camera if present, otherwise use first available (e.g. laptop webcam)
+        const backCamera = devices.find((d) =>
+          /back|rear|environment/i.test(d.label)
+        );
+        const selectedCameraId = backCamera ? backCamera.id : devices[0].id;
 
         const html5QrCode = new Html5Qrcode(regionId);
         scannerRef.current = html5QrCode;
 
         await html5QrCode.start(
-          { facingMode: 'environment' },
+          selectedCameraId,
           {
             fps: 12,
-            qrbox: { width: 240, height: 240 },
-            aspectRatio: 1.0,
+            qrbox: { width: 230, height: 230 },
           },
           (decodedText) => {
             html5QrCode
@@ -72,7 +97,6 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
 
         if (isMounted) {
           setIsStarting(false);
-          // Check if device camera supports flashlight/torch
           try {
             const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
             if (capabilities.torchFeature().isSupported()) {
@@ -85,11 +109,12 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
       } catch (err: any) {
         if (isMounted) {
           setIsStarting(false);
-          setCameraError(
-            err?.message?.includes('Permission')
-              ? 'Camera permission blocked. Allow camera access or upload a QR photo below.'
-              : 'Camera unavailable on this device. Upload a QR image or type the sticker code below.'
-          );
+          const msg = err?.message || String(err);
+          if (msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('notallowed')) {
+            setCameraError('Camera permission denied. Allow camera access in browser settings or upload a QR image below.');
+          } else {
+            setCameraError(`${msg} — You can upload a QR image or enter the sticker code below.`);
+          }
         }
       }
     }
@@ -107,7 +132,6 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
     };
   }, [isOpen]);
 
-  // Toggle Flashlight (Torch)
   async function toggleTorch() {
     if (!scannerRef.current) return;
     try {
@@ -121,13 +145,11 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
     }
   }
 
-  // Scan QR from Gallery Image (PhonePe / GPay style)
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      // Stop live camera first if running
       if (scannerRef.current && scannerRef.current.isScanning) {
         await scannerRef.current.stop();
       }
@@ -144,7 +166,6 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
 
   return (
     <div className="fixed inset-0 bg-black/90 z-50 flex flex-col justify-between p-4 sm:p-6 text-white select-none">
-      {/* Custom Laser Animation */}
       <style jsx>{`
         @keyframes scanLaser {
           0%, 100% {
@@ -159,7 +180,7 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
         }
       `}</style>
 
-      {/* Top Bar (Close & Torch) */}
+      {/* Top Bar */}
       <div className="max-w-md w-full mx-auto flex items-center justify-between pt-2">
         <button
           onClick={onClose}
@@ -188,13 +209,12 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
         )}
       </div>
 
-      {/* Center Viewfinder Area */}
+      {/* Center Viewfinder */}
       <div className="max-w-sm w-full mx-auto my-auto flex flex-col items-center">
         <p className="text-center font-black text-yellow-400 text-sm tracking-wide uppercase mb-4">
           Align Car QR Sticker Inside Frame
         </p>
 
-        {/* Viewfinder Box with Yellow Cartoon Corner Brackets */}
         <div className="relative w-72 h-72 sm:w-80 sm:h-80 bg-stone-950 rounded-3xl overflow-hidden border-4 border-yellow-400 shadow-[0_0_0_4px_#000,0_0_30px_rgba(250,204,21,0.3)] flex items-center justify-center">
           {isStarting && !cameraError && (
             <div className="text-yellow-400 font-black text-xs uppercase tracking-widest animate-pulse text-center px-4">
@@ -209,22 +229,20 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
             </div>
           ) : (
             <>
-              <div id="honksafe-qr-reader" className="w-full h-full object-cover" />
-              {/* Sweeping Yellow Laser Line */}
+              <div id="honksafe-gpay-reader" className="w-full h-full object-cover" />
               {!isStarting && (
                 <div className="pointer-events-none absolute left-4 right-4 h-1 bg-yellow-400 rounded-full shadow-[0_0_12px_#FACC15] animate-laser z-10" />
               )}
             </>
           )}
 
-          {/* 4 Bold Corner Accents */}
           <div className="pointer-events-none absolute top-3 left-3 w-7 h-7 border-t-4 border-l-4 border-yellow-400 rounded-tl-xl" />
           <div className="pointer-events-none absolute top-3 right-3 w-7 h-7 border-t-4 border-r-4 border-yellow-400 rounded-tr-xl" />
           <div className="pointer-events-none absolute bottom-3 left-3 w-7 h-7 border-b-4 border-l-4 border-yellow-400 rounded-bl-xl" />
           <div className="pointer-events-none absolute bottom-3 right-3 w-7 h-7 border-b-4 border-r-4 border-yellow-400 rounded-br-xl" />
         </div>
 
-        {/* PhonePe / GPay Style "Upload from Gallery" Pill */}
+        {/* Upload QR from Gallery */}
         <div className="mt-6">
           <input
             ref={fileInputRef}
