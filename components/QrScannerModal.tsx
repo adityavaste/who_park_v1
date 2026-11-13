@@ -43,7 +43,6 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
       setCameraError(null);
       setTorchOn(false);
 
-      // Check for insecure HTTP origin (e.g., testing via 192.168.x.x on phone)
       if (
         typeof window !== 'undefined' &&
         window.location.protocol !== 'https:' &&
@@ -52,7 +51,7 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
       ) {
         setIsStarting(false);
         setCameraError(
-          'Browser blocked camera because this page is on HTTP, not HTTPS. Use localhost, ngrok, or upload a QR photo below.'
+          'Browser blocked camera because this page is on HTTP, not HTTPS. Use HTTPS or upload a QR photo below.'
         );
         return;
       }
@@ -61,13 +60,11 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
         await new Promise((r) => setTimeout(r, 150));
         if (!isMounted) return;
 
-        // Enumerate cameras so laptops and phones both work seamlessly
         const devices = await Html5Qrcode.getCameras();
         if (!devices || devices.length === 0) {
           throw new Error('No camera hardware detected on this device.');
         }
 
-        // Prefer back/environment camera if present, otherwise use first available (e.g. laptop webcam)
         const backCamera = devices.find((d) =>
           /back|rear|environment/i.test(d.label)
         );
@@ -80,7 +77,12 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
           selectedCameraId,
           {
             fps: 12,
-            qrbox: { width: 230, height: 230 },
+            // Dynamic qrbox covering 80% of the viewfinder
+            qrbox: (viewfinderWidth, viewfinderHeight) => {
+              const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+              const size = Math.floor(minEdge * 0.8);
+              return { width: size, height: size };
+            },
           },
           (decodedText) => {
             html5QrCode
@@ -166,7 +168,8 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
 
   return (
     <div className="fixed inset-0 bg-black/90 z-50 flex flex-col justify-between p-4 sm:p-6 text-white select-none">
-      <style jsx>{`
+      {/* Force html5-qrcode internal video & wrapper to fill 100% full ratio */}
+      <style jsx global>{`
         @keyframes scanLaser {
           0%, 100% {
             top: 8%;
@@ -177,6 +180,22 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
         }
         .animate-laser {
           animation: scanLaser 2.2s ease-in-out infinite;
+        }
+        #honksafe-gpay-reader {
+          width: 100% !important;
+          height: 100% !important;
+          position: relative !important;
+          overflow: hidden !important;
+        }
+        #honksafe-gpay-reader video {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: cover !important;
+          display: block !important;
+        }
+        /* Hide html5-qrcode's default dark border overlay so our yellow frame shines */
+        #honksafe-gpay-reader #qr-shaded-region {
+          display: none !important;
         }
       `}</style>
 
@@ -229,17 +248,18 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
             </div>
           ) : (
             <>
-              <div id="honksafe-gpay-reader" className="w-full h-full object-cover" />
+              <div id="honksafe-gpay-reader" className="w-full h-full" />
               {!isStarting && (
                 <div className="pointer-events-none absolute left-4 right-4 h-1 bg-yellow-400 rounded-full shadow-[0_0_12px_#FACC15] animate-laser z-10" />
               )}
             </>
           )}
 
-          <div className="pointer-events-none absolute top-3 left-3 w-7 h-7 border-t-4 border-l-4 border-yellow-400 rounded-tl-xl" />
-          <div className="pointer-events-none absolute top-3 right-3 w-7 h-7 border-t-4 border-r-4 border-yellow-400 rounded-tr-xl" />
-          <div className="pointer-events-none absolute bottom-3 left-3 w-7 h-7 border-b-4 border-l-4 border-yellow-400 rounded-bl-xl" />
-          <div className="pointer-events-none absolute bottom-3 right-3 w-7 h-7 border-b-4 border-r-4 border-yellow-400 rounded-br-xl" />
+          {/* 4 Yellow Corner Brackets */}
+          <div className="pointer-events-none absolute top-3 left-3 w-7 h-7 border-t-4 border-l-4 border-yellow-400 rounded-tl-xl z-20" />
+          <div className="pointer-events-none absolute top-3 right-3 w-7 h-7 border-t-4 border-r-4 border-yellow-400 rounded-tr-xl z-20" />
+          <div className="pointer-events-none absolute bottom-3 left-3 w-7 h-7 border-b-4 border-l-4 border-yellow-400 rounded-bl-xl z-20" />
+          <div className="pointer-events-none absolute bottom-3 right-3 w-7 h-7 border-b-4 border-r-4 border-yellow-400 rounded-br-xl z-20" />
         </div>
 
         {/* Upload QR from Gallery */}
