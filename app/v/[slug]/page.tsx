@@ -20,12 +20,33 @@ function ScannerContent() {
   const [sending, setSending] = useState(false);
   const [alertSuccess, setAlertSuccess] = useState<string | null>(null);
 
+  // Live owner reply tracking
+  const [activeAlertId, setActiveAlertId] = useState<string | null>(null);
+  const [ownerReply, setOwnerReply] = useState<string | null>(null);
+
   // Cooldown & daily limit states
   const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
   const [dailyBlocked, setDailyBlocked] = useState<boolean>(false);
   const [remainingToday, setRemainingToday] = useState<number | null>(null);
 
-  // Restore any active cooldown from localStorage on page reload
+  // Poll for the car owner's quick reply once an alert has been sent
+  useEffect(() => {
+    if (!activeAlertId || ownerReply) return;
+
+    const replyPoll = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/alerts/status/${activeAlertId}`);
+        const data = await res.json();
+        if (data.success && data.ownerReply) {
+          setOwnerReply(data.ownerReply);
+        }
+      } catch {}
+    }, 3000);
+
+    return () => clearInterval(replyPoll);
+  }, [activeAlertId, ownerReply]);
+
+  // Restore any active cooldown & activeAlertId from localStorage on page reload
   useEffect(() => {
     if (!slug) return;
     const savedUntil = localStorage.getItem(`honksafe_cooldown_${slug}`);
@@ -36,6 +57,11 @@ function ScannerContent() {
       } else {
         localStorage.removeItem(`honksafe_cooldown_${slug}`);
       }
+    }
+
+    const savedAlertId = localStorage.getItem(`honksafe_last_alert_${slug}`);
+    if (savedAlertId) {
+      setActiveAlertId(savedAlertId);
     }
   }, [slug]);
 
@@ -115,6 +141,12 @@ function ScannerContent() {
         String(Date.now() + waitSecs * 1000)
       );
 
+      if (data.alertId) {
+        setActiveAlertId(data.alertId);
+        setOwnerReply(null);
+        localStorage.setItem(`honksafe_last_alert_${slug}`, data.alertId);
+      }
+
       if (typeof data.remainingDailyPings === 'number') {
         setRemainingToday(data.remainingDailyPings);
       }
@@ -136,7 +168,7 @@ function ScannerContent() {
   if (loading) {
     return (
       <main className="min-h-screen bg-[#FFFDF0] flex items-center justify-center p-4">
-        <div className="bg-yellow-300 border-4 border-black p-8 rounded-3xl shadow-[6px_6px_0px_#000] text-center max-w-xs w-full animate-bounce">
+        <div className="bg-yellow-300 border-4 border-black p-8 rounded-3xl shadow-[6px_6px_0px_#000] text-center max-w-xs w-full">
           <div className="text-5xl mb-3">🚕💨</div>
           <p className="font-black text-xl text-black uppercase tracking-wider">Finding Car...</p>
         </div>
@@ -208,6 +240,27 @@ function ScannerContent() {
             </div>
           )}
         </div>
+
+        {/* Live Owner Quick Reply Bubble */}
+        {ownerReply && (
+          <div className="bg-emerald-300 border-4 border-black text-black p-4 rounded-2xl text-sm font-black mb-5 shadow-[5px_5px_0px_#000] flex items-center gap-3">
+            <span className="text-3xl">💬</span>
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-black/75">
+                Driver Replied Just Now:
+              </p>
+              <p className="text-base font-black mt-0.5">&ldquo;{ownerReply}&rdquo;</p>
+            </div>
+          </div>
+        )}
+
+        {/* Waiting for Owner Reply Indicator */}
+        {activeAlertId && !ownerReply && (
+          <div className="bg-white border-3 border-black text-black px-4 py-3 rounded-2xl text-xs font-black mb-5 shadow-[4px_4px_0px_#000] flex items-center justify-center gap-2">
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+            <span>Waiting for driver&apos;s quick reply...</span>
+          </div>
+        )}
 
         {/* Cooldown Timer Banner */}
         {cooldownSeconds > 0 && !dailyBlocked && (

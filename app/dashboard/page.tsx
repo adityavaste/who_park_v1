@@ -26,8 +26,22 @@ interface AlertItem {
   tagId: string;
   alertType: string;
   status: string;
+  ownerReply?: string | null;
   createdAt: string;
   plateNumber?: string;
+}
+
+const QUICK_REPLIES = [
+  '🏃 Coming in 2 mins!',
+  '⏳ Wait, I am nearby',
+  '🙏 Thanks for alerting!',
+];
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
 }
 
 export default function CartoonDashboardPage() {
@@ -39,9 +53,10 @@ export default function CartoonDashboardPage() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<{ phone: string; fullName: string | null } | null>(null);
 
-  // Sound & Live Ringing States
-  const [soundEnabled, setSoundEnabled] = useState(false);
+  // Sound, Push & Steady Ringing States
+  const [alertsActivated, setAlertsActivated] = useState(false);
   const [ringingAlert, setRingingAlert] = useState<AlertItem | null>(null);
+  const [sendingReply, setSendingReply] = useState(false);
   const latestAlertIdRef = useRef<string | null>(null);
   const isFirstLoadRef = useRef<boolean>(true);
 
@@ -50,44 +65,75 @@ export default function CartoonDashboardPage() {
   const [newEmergency, setNewEmergency] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Enable sound + browser notifications on tap
-  async function handleEnableSound() {
-    const unlocked = unlockAudio();
-    if (unlocked) {
-      setSoundEnabled(true);
-      playSingleAlertChime();
+  // Register Service Worker & Subscribe to Background Web Push
+  async function registerBackgroundPush() {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      return;
     }
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'default') {
-        await Notification.requestPermission();
-      }
+
+    try {
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return;
+
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) return;
+
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+      });
+
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription }),
+      });
+    } catch (err) {
+      console.error('Background push setup error:', err);
     }
+  }
+
+  async function handleEnableAlerts() {
+    unlockAudio();
+    playSingleAlertChime();
+    setAlertsActivated(true);
+    await registerBackgroundPush();
   }
 
   function triggerIncomingAlertRing(newAlert: AlertItem) {
     setRingingAlert(newAlert);
     startContinuousRing();
-
-    // Also fire system browser notification if permitted
-    if (
-      typeof window !== 'undefined' &&
-      'Notification' in window &&
-      Notification.permission === 'granted'
-    ) {
-      new Notification(`🚨 CAR ALERT: ${newAlert.plateNumber || 'Your Vehicle'}`, {
-        body:
-          newAlert.alertType === 'OBSTRUCTION'
-            ? 'Your car is blocking someone! Please move it.'
-            : newAlert.alertType === 'HEADLIGHTS'
-            ? 'Headlights or window left open!'
-            : 'Urgent emergency alert on your vehicle!',
-      });
-    }
   }
 
-  function handleStopRing() {
+  function handleStopRingOnly() {
     stopContinuousRing();
     setRingingAlert(null);
+  }
+
+  async function handleQuickReply(replyText: string) {
+    if (!ringingAlert) return;
+    setSendingReply(true);
+    stopContinuousRing();
+
+    try {
+      await fetch('/api/alerts/reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          alertId: ringingAlert.id,
+          replyMessage: replyText,
+        }),
+      });
+      setRingingAlert(null);
+      loadDashboardData(true);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSendingReply(false);
+    }
   }
 
   async function loadDashboardData(silent = false) {
@@ -105,7 +151,6 @@ export default function CartoonDashboardPage() {
         setAlerts(incomingAlerts);
         if (data.user) setUserInfo(data.user);
 
-        // Detect brand new incoming alert compared to last check
         if (incomingAlerts.length > 0) {
           const newest = incomingAlerts[0];
           if (isFirstLoadRef.current) {
@@ -126,8 +171,12 @@ export default function CartoonDashboardPage() {
     }
   }
 
-  // Initial load + 4-second live background polling for incoming alerts
   useEffect(() => {
+    // Register SW silently on load if already granted
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      registerBackgroundPush();
+    }
+
     loadDashboardData(false);
 
     const pollTimer = setInterval(() => {
@@ -179,7 +228,7 @@ export default function CartoonDashboardPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-[#FFFDF0] flex items-center justify-center p-4">
-        <div className="bg-yellow-300 border-4 border-black p-6 rounded-3xl shadow-[6px_6px_0px_#000] font-black text-xl animate-bounce">
+        <div className="bg-yellow-300 border-4 border-black p-6 rounded-3xl shadow-[6px_6px_0px_#000] font-black text-xl">
           ⚡ LOADING GARAGE...
         </div>
       </main>
@@ -189,9 +238,8 @@ export default function CartoonDashboardPage() {
   return (
     <main
       onClick={() => {
-        // Automatically unlock mobile audio on any tap inside dashboard
-        if (!soundEnabled && unlockAudio()) {
-          setSoundEnabled(true);
+        if (!alertsActivated && unlockAudio()) {
+          setAlertsActivated(true);
         }
       }}
       className="min-h-screen bg-[#FFFDF0] pt-6 pb-32 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto selection:bg-yellow-300"
@@ -222,24 +270,24 @@ export default function CartoonDashboardPage() {
         )}
       </nav>
 
-      {/* Sound / Ringtone Activation Banner */}
+      {/* Background Push & Ringtone Activation Banner */}
       <div
         className={`mb-6 p-4 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
-          soundEnabled ? 'bg-emerald-200' : 'bg-yellow-300'
+          alertsActivated ? 'bg-emerald-200' : 'bg-yellow-300'
         }`}
       >
         <div className="flex items-center gap-3">
-          <span className="text-2xl">{soundEnabled ? '🔔' : '🔕'}</span>
+          <span className="text-2xl">{alertsActivated ? '🔔' : '📲'}</span>
           <div>
             <p className="text-xs sm:text-sm font-black text-black uppercase">
-              {soundEnabled
-                ? 'Live Ringtone Active — Mobile Will Ring on Alert!'
-                : 'Tap to Enable Live Ringtone & Sound Alerts'}
+              {alertsActivated
+                ? 'Background Push & Ringtone Active!'
+                : 'Enable Background Alerts & Ringtone'}
             </p>
             <p className="text-[11px] font-bold text-stone-800">
-              {soundEnabled
-                ? 'Keep this tab open when parked; your phone will ring & vibrate when scanned.'
-                : 'Mobile browsers require one tap to allow incoming alert sounds.'}
+              {alertsActivated
+                ? 'You will receive alerts even when the app is closed. Install via "Add to Home Screen".'
+                : 'Tap once to allow ringtone sound & alerts even when your phone screen is off.'}
             </p>
           </div>
         </div>
@@ -248,11 +296,11 @@ export default function CartoonDashboardPage() {
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            handleEnableSound();
+            handleEnableAlerts();
           }}
           className="bg-white hover:bg-yellow-50 active:translate-y-0.5 text-black font-black text-xs px-4 py-2.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] whitespace-nowrap transition"
         >
-          {soundEnabled ? '🔊 TEST RING' : '🔔 ENABLE SOUND'}
+          {alertsActivated ? '🔊 TEST RING' : '🔔 ENABLE ALERTS'}
         </button>
       </div>
 
@@ -326,7 +374,6 @@ export default function CartoonDashboardPage() {
                     🚘 {veh.makeModel || 'Vehicle'}
                   </p>
 
-                  {/* Sticker Preview */}
                   <div className="mt-5 bg-yellow-100 border-3 border-black p-4 rounded-2xl flex items-center gap-4 shadow-[4px_4px_0px_#000]">
                     <div className="bg-white p-2 rounded-xl border-2 border-black flex-shrink-0">
                       <img
@@ -344,7 +391,6 @@ export default function CartoonDashboardPage() {
                   </div>
                 </div>
 
-                {/* Printable Sticker Card + Raw PNG Download */}
                 <div className="mt-6 flex items-center gap-3">
                   <Link
                     href={`/dashboard/sticker/${veh.tagSlug}`}
@@ -411,6 +457,11 @@ export default function CartoonDashboardPage() {
                           {!['OBSTRUCTION', 'HEADLIGHTS', 'EMERGENCY'].includes(al.alertType) && al.alertType}
                         </p>
                       </div>
+                      {al.ownerReply && (
+                        <p className="text-xs font-black text-emerald-700 mt-1">
+                          ↪ Your Reply: &ldquo;{al.ownerReply}&rdquo;
+                        </p>
+                      )}
                       <p className="text-xs font-bold text-stone-500 font-mono mt-0.5">
                         {new Date(al.createdAt).toLocaleString('en-IN', {
                           dateStyle: 'medium',
@@ -442,35 +493,56 @@ export default function CartoonDashboardPage() {
         </button>
       </div>
 
-      {/* INCOMING RINGING CALL-STYLE ALERT POPUP */}
+      {/* STEADY (NON-BOUNCING) INCOMING ALERT POPUP WITH QUICK REPLIES */}
       {ringingAlert && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-yellow-400 rounded-3xl max-w-sm w-full p-7 border-4 border-black shadow-[10px_10px_0px_#fff] text-center animate-bounce">
-            <div className="w-20 h-20 bg-white border-4 border-black rounded-full flex items-center justify-center text-4xl mx-auto shadow-[4px_4px_0px_#000]">
+          <div className="bg-yellow-400 rounded-3xl max-w-sm w-full p-6 sm:p-7 border-4 border-black shadow-[10px_10px_0px_#fff] text-center">
+            <div className="w-16 h-16 bg-white border-4 border-black rounded-full flex items-center justify-center text-3xl mx-auto shadow-[4px_4px_0px_#000] animate-pulse">
               🚨
             </div>
 
-            <div className="inline-block bg-black text-yellow-400 text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest mt-4">
+            <div className="inline-block bg-black text-yellow-400 text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-widest mt-3">
               INCOMING VEHICLE PING!
             </div>
 
             {ringingAlert.plateNumber && (
-              <div className="mt-3 bg-white border-3 border-black rounded-2xl py-2 px-4 font-mono font-black text-2xl text-black tracking-widest">
+              <div className="mt-2.5 bg-white border-3 border-black rounded-2xl py-2 px-4 font-mono font-black text-2xl text-black tracking-widest">
                 {ringingAlert.plateNumber}
               </div>
             )}
 
-            <h3 className="text-xl font-black text-black mt-3 uppercase">
+            <h3 className="text-lg font-black text-black mt-3 uppercase leading-snug">
               {ringingAlert.alertType === 'OBSTRUCTION' && '🚗 YOUR CAR IS BLOCKING SOMEONE!'}
               {ringingAlert.alertType === 'HEADLIGHTS' && '💡 HEADLIGHTS OR WINDOW OPEN!'}
               {ringingAlert.alertType === 'EMERGENCY' && '🚨 URGENT TOW / EMERGENCY!'}
             </h3>
 
+            {/* Quick Reply Buttons to Send Directly to Scanner */}
+            <div className="mt-5 text-left">
+              <p className="text-[11px] font-black text-black uppercase tracking-wider mb-2 text-center">
+                Tap a Quick Reply to Send & Stop Ring:
+              </p>
+              <div className="space-y-2">
+                {QUICK_REPLIES.map((reply) => (
+                  <button
+                    key={reply}
+                    disabled={sendingReply}
+                    onClick={() => handleQuickReply(reply)}
+                    className="w-full bg-white hover:bg-yellow-100 active:translate-y-0.5 text-black font-black text-xs sm:text-sm py-3 px-4 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000] transition flex items-center justify-between"
+                  >
+                    <span>{reply}</span>
+                    <span>➔</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Dismiss / Stop Ring Button */}
             <button
-              onClick={handleStopRing}
-              className="mt-6 w-full bg-rose-500 hover:bg-rose-400 active:translate-y-1 text-white font-black text-base py-4 px-6 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition"
+              onClick={handleStopRingOnly}
+              className="mt-4 w-full bg-rose-500 hover:bg-rose-400 active:translate-y-0.5 text-white font-black text-xs py-3.5 px-5 rounded-2xl border-3 border-black shadow-[4px_4px_0px_#000] transition"
             >
-              🔕 STOP RING & ACKNOWLEDGE
+              🔕 STOP RING ONLY
             </button>
           </div>
         </div>
