@@ -11,7 +11,7 @@ self.addEventListener('push', (event) => {
   if (!event.data) return;
 
   let payload = {
-    title: '🚨 HONKSAFE CAR ALERT!',
+    title: '🚨 WHO PARK CAR ALERT!',
     body: 'Someone scanned your vehicle QR sticker!',
     url: '/dashboard',
   };

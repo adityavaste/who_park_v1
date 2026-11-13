@@ -35,7 +35,7 @@ export async function GET(
             letterSpacing: '-0.03em',
           }}
         >
-          HONKSAFE
+          WHO PARK
         </div>
       </div>
     ),
