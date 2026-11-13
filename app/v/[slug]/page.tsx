@@ -19,7 +19,42 @@ function ScannerContent() {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [alertSuccess, setAlertSuccess] = useState<string | null>(null);
-  const [customNote, setCustomNote] = useState('');
+
+  // Cooldown & daily limit states
+  const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
+  const [dailyBlocked, setDailyBlocked] = useState<boolean>(false);
+  const [remainingToday, setRemainingToday] = useState<number | null>(null);
+
+  // Restore any active cooldown from localStorage on page reload
+  useEffect(() => {
+    if (!slug) return;
+    const savedUntil = localStorage.getItem(`honksafe_cooldown_${slug}`);
+    if (savedUntil) {
+      const diff = Math.ceil((Number(savedUntil) - Date.now()) / 1000);
+      if (diff > 0) {
+        setCooldownSeconds(diff);
+      } else {
+        localStorage.removeItem(`honksafe_cooldown_${slug}`);
+      }
+    }
+  }, [slug]);
+
+  // Live 1-second countdown ticker
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+
+    const timer = setInterval(() => {
+      setCooldownSeconds((prev) => {
+        if (prev <= 1) {
+          localStorage.removeItem(`honksafe_cooldown_${slug}`);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [cooldownSeconds, slug]);
 
   useEffect(() => {
     if (!slug) return;
@@ -44,6 +79,8 @@ function ScannerContent() {
   }, [slug]);
 
   async function handleSendAlert(alertType: string, label: string) {
+    if (cooldownSeconds > 0 || dailyBlocked) return;
+
     setSending(true);
     setAlertSuccess(null);
     setError(null);
@@ -58,7 +95,28 @@ function ScannerContent() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
+        if (data.retryAfterSeconds) {
+          setCooldownSeconds(data.retryAfterSeconds);
+          localStorage.setItem(
+            `honksafe_cooldown_${slug}`,
+            String(Date.now() + data.retryAfterSeconds * 1000)
+          );
+        }
+        if (data.dailyLimitReached) {
+          setDailyBlocked(true);
+        }
         throw new Error(data.error || 'Could not send alert.');
+      }
+
+      const waitSecs = data.cooldownSeconds || 300;
+      setCooldownSeconds(waitSecs);
+      localStorage.setItem(
+        `honksafe_cooldown_${slug}`,
+        String(Date.now() + waitSecs * 1000)
+      );
+
+      if (typeof data.remainingDailyPings === 'number') {
+        setRemainingToday(data.remainingDailyPings);
       }
 
       setAlertSuccess(`BEEP BEEP! "${label}" alert delivered to the driver!`);
@@ -67,6 +125,12 @@ function ScannerContent() {
     } finally {
       setSending(false);
     }
+  }
+
+  function formatCountdown(totalSecs: number) {
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
   if (loading) {
@@ -99,6 +163,8 @@ function ScannerContent() {
       </main>
     );
   }
+
+  const isLocked = sending || cooldownSeconds > 0 || dailyBlocked;
 
   return (
     <main className="min-h-screen bg-[#FFFDF0] py-6 px-4 flex flex-col justify-between max-w-md mx-auto selection:bg-yellow-300">
@@ -143,6 +209,32 @@ function ScannerContent() {
           )}
         </div>
 
+        {/* Cooldown Timer Banner */}
+        {cooldownSeconds > 0 && !dailyBlocked && (
+          <div className="bg-yellow-300 border-4 border-black text-black p-4 rounded-2xl mb-5 shadow-[5px_5px_0px_#000] text-center">
+            <p className="text-xs font-black uppercase tracking-wider">
+              ⏳ Anti-Spam Cooldown Active
+            </p>
+            <p className="text-2xl font-black font-mono mt-1">
+              {formatCountdown(cooldownSeconds)}
+            </p>
+            <p className="text-[11px] font-bold text-stone-800 mt-1">
+              You can send another alert after the timer ends.
+              {remainingToday !== null && ` (${remainingToday}/10 pings left today)`}
+            </p>
+          </div>
+        )}
+
+        {/* Daily Limit Banner */}
+        {dailyBlocked && (
+          <div className="bg-rose-200 border-4 border-black text-black p-4 rounded-2xl mb-5 shadow-[5px_5px_0px_#000] text-center">
+            <p className="text-sm font-black uppercase">🚫 Daily Limit Reached (10/10)</p>
+            <p className="text-xs font-bold mt-1">
+              You have reached the maximum 10 alerts allowed per 24 hours.
+            </p>
+          </div>
+        )}
+
         {/* Success / Error Speech Bubbles */}
         {alertSuccess && (
           <div className="bg-white border-4 border-black text-black p-4 rounded-2xl text-sm font-black mb-5 shadow-[5px_5px_0px_#16a34a] flex items-center gap-3">
@@ -151,7 +243,7 @@ function ScannerContent() {
           </div>
         )}
 
-        {error && (
+        {error && !cooldownSeconds && !dailyBlocked && (
           <div className="bg-white border-4 border-black text-black p-4 rounded-2xl text-sm font-black mb-5 shadow-[5px_5px_0px_#dc2626] flex items-center gap-3">
             <span className="text-3xl">💥</span>
             <div>{error}</div>
@@ -162,8 +254,8 @@ function ScannerContent() {
         <div className="space-y-3.5">
           <button
             onClick={() => handleSendAlert('OBSTRUCTION', 'Car is blocking my way')}
-            disabled={sending}
-            className="w-full bg-yellow-400 hover:bg-yellow-300 active:translate-x-1 active:translate-y-1 active:shadow-none text-black font-black text-sm sm:text-base py-4 px-5 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition-all flex items-center justify-between disabled:opacity-50"
+            disabled={isLocked}
+            className="w-full bg-yellow-400 hover:bg-yellow-300 active:translate-x-1 active:translate-y-1 active:shadow-none text-black font-black text-sm sm:text-base py-4 px-5 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition-all flex items-center justify-between disabled:opacity-45 disabled:cursor-not-allowed disabled:active:translate-x-0 disabled:active:translate-y-0"
           >
             <span className="flex items-center gap-3">
               <span className="text-2xl">🚗</span>
@@ -174,8 +266,8 @@ function ScannerContent() {
 
           <button
             onClick={() => handleSendAlert('HEADLIGHTS', 'Lights or windows open')}
-            disabled={sending}
-            className="w-full bg-white hover:bg-yellow-50 active:translate-x-1 active:translate-y-1 active:shadow-none text-black font-black text-sm sm:text-base py-4 px-5 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition-all flex items-center justify-between disabled:opacity-50"
+            disabled={isLocked}
+            className="w-full bg-white hover:bg-yellow-50 active:translate-x-1 active:translate-y-1 active:shadow-none text-black font-black text-sm sm:text-base py-4 px-5 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition-all flex items-center justify-between disabled:opacity-45 disabled:cursor-not-allowed disabled:active:translate-x-0 disabled:active:translate-y-0"
           >
             <span className="flex items-center gap-3">
               <span className="text-2xl">💡</span>
@@ -186,8 +278,8 @@ function ScannerContent() {
 
           <button
             onClick={() => handleSendAlert('EMERGENCY', 'Tow / Urgent Emergency')}
-            disabled={sending}
-            className="w-full bg-yellow-200 hover:bg-yellow-300 active:translate-x-1 active:translate-y-1 active:shadow-none text-black font-black text-sm sm:text-base py-4 px-5 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition-all flex items-center justify-between disabled:opacity-50"
+            disabled={isLocked}
+            className="w-full bg-yellow-200 hover:bg-yellow-300 active:translate-x-1 active:translate-y-1 active:shadow-none text-black font-black text-sm sm:text-base py-4 px-5 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition-all flex items-center justify-between disabled:opacity-45 disabled:cursor-not-allowed disabled:active:translate-x-0 disabled:active:translate-y-0"
           >
             <span className="flex items-center gap-3">
               <span className="text-2xl">🚨</span>
@@ -200,7 +292,7 @@ function ScannerContent() {
 
       {/* Footer */}
       <footer className="text-center font-bold text-xs text-stone-500 mt-8">
-        🛡️ Phone numbers remain completely hidden for both parties.
+        🛡️ Rate-limited (1 ping / 5 mins • Max 10 / day) to protect owners.
       </footer>
     </main>
   );
