@@ -194,4 +194,4 @@ export default function PrintableStickerPage() {
       <StickerPrintContent />
     </Suspense>
   );
-}
+}   
