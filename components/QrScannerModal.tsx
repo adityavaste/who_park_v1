@@ -50,55 +50,75 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
         window.location.hostname !== '127.0.0.1'
       ) {
         setIsStarting(false);
-        setCameraError(
-          'Browser blocked camera because this page is on HTTP, not HTTPS. Use HTTPS or upload a QR photo below.'
-        );
+        setCameraError('HTTPS is required to open the mobile camera.');
         return;
       }
 
       try {
-        await new Promise((r) => setTimeout(r, 150));
+        await new Promise((r) => setTimeout(r, 200));
         if (!isMounted) return;
 
-        const devices = await Html5Qrcode.getCameras();
-        if (!devices || devices.length === 0) {
-          throw new Error('No camera hardware detected on this device.');
+        // Clean up any leftover instance before starting
+        if (scannerRef.current) {
+          try {
+            if (scannerRef.current.isScanning) {
+              await scannerRef.current.stop();
+            }
+            scannerRef.current.clear();
+          } catch {}
         }
 
-        const backCamera = devices.find((d) =>
-          /back|rear|environment/i.test(d.label)
-        );
-        const selectedCameraId = backCamera ? backCamera.id : devices[0].id;
-
-        const html5QrCode = new Html5Qrcode(regionId);
+        const html5QrCode = new Html5Qrcode(regionId, { verbose: false });
         scannerRef.current = html5QrCode;
 
-        await html5QrCode.start(
-          selectedCameraId,
-          {
-            fps: 12,
-            // Dynamic qrbox covering 80% of the viewfinder
-            qrbox: (viewfinderWidth, viewfinderHeight) => {
-              const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-              const size = Math.floor(minEdge * 0.8);
-              return { width: size, height: size };
-            },
+        const config = {
+          fps: 12,
+          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const size = Math.floor(minEdge * 0.8);
+            return { width: size, height: size };
           },
-          (decodedText) => {
-            html5QrCode
-              .stop()
-              .then(() => {
-                html5QrCode.clear();
-                scannerRef.current = null;
-                handleRedirect(decodedText);
-              })
-              .catch(() => handleRedirect(decodedText));
-          },
-          () => {}
-        );
+        };
+
+        const onSuccess = (decodedText: string) => {
+          html5QrCode
+            .stop()
+            .then(() => {
+              html5QrCode.clear();
+              scannerRef.current = null;
+              handleRedirect(decodedText);
+            })
+            .catch(() => handleRedirect(decodedText));
+        };
+
+        // 1. Try rear mobile camera first (triggers mobile permission prompt directly)
+        try {
+          await html5QrCode.start(
+            { facingMode: 'environment' },
+            config,
+            onSuccess,
+            () => {}
+          );
+        } catch {
+          // 2. Fallback to front/laptop camera if rear camera is unavailable
+          await html5QrCode.start(
+            { facingMode: 'user' },
+            config,
+            onSuccess,
+            () => {}
+          );
+        }
 
         if (isMounted) {
           setIsStarting(false);
+
+          // Ensure injected <video> element plays inline on mobile browsers
+          const videoEl = document.querySelector(`#${regionId} video`) as HTMLVideoElement | null;
+          if (videoEl) {
+            videoEl.setAttribute('playsinline', 'true');
+            videoEl.setAttribute('muted', 'true');
+          }
+
           try {
             const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
             if (capabilities.torchFeature().isSupported()) {
@@ -113,9 +133,13 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
           setIsStarting(false);
           const msg = err?.message || String(err);
           if (msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('notallowed')) {
-            setCameraError('Camera permission denied. Allow camera access in browser settings or upload a QR image below.');
+            setCameraError(
+              'Camera access was blocked. Tap the lock/settings icon in your browser address bar, set Camera to "Allow", and reload.'
+            );
           } else {
-            setCameraError(`${msg} — You can upload a QR image or enter the sticker code below.`);
+            setCameraError(
+              `Camera could not open (${msg}). Use "Upload QR from Gallery" below.`
+            );
           }
         }
       }
@@ -125,11 +149,15 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
 
     return () => {
       isMounted = false;
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current
-          .stop()
-          .then(() => scannerRef.current?.clear())
-          .catch(() => {});
+      if (scannerRef.current) {
+        const currentScanner = scannerRef.current;
+        scannerRef.current = null;
+        if (currentScanner.isScanning) {
+          currentScanner
+            .stop()
+            .then(() => currentScanner.clear())
+            .catch(() => {});
+        }
       }
     };
   }, [isOpen]);
@@ -168,7 +196,6 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
 
   return (
     <div className="fixed inset-0 bg-black/90 z-50 flex flex-col justify-between p-4 sm:p-6 text-white select-none">
-      {/* Force html5-qrcode internal video & wrapper to fill 100% full ratio */}
       <style jsx global>{`
         @keyframes scanLaser {
           0%, 100% {
@@ -193,7 +220,6 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
           object-fit: cover !important;
           display: block !important;
         }
-        /* Hide html5-qrcode's default dark border overlay so our yellow frame shines */
         #honksafe-gpay-reader #qr-shaded-region {
           display: none !important;
         }
@@ -255,7 +281,6 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
             </>
           )}
 
-          {/* 4 Yellow Corner Brackets */}
           <div className="pointer-events-none absolute top-3 left-3 w-7 h-7 border-t-4 border-l-4 border-yellow-400 rounded-tl-xl z-20" />
           <div className="pointer-events-none absolute top-3 right-3 w-7 h-7 border-t-4 border-r-4 border-yellow-400 rounded-tr-xl z-20" />
           <div className="pointer-events-none absolute bottom-3 left-3 w-7 h-7 border-b-4 border-l-4 border-yellow-400 rounded-bl-xl z-20" />
