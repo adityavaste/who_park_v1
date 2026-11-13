@@ -3,8 +3,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'HONKSAFE — Smart Car Alert',
-    short_name: 'HONKSAFE',
+    name: 'WHO PARK — Smart Car Alert',
+    short_name: 'WHO PARK',
     description: 'Anonymous QR vehicle alerts & instant owner notifications',
     start_url: '/dashboard',
     display: 'standalone',

@@ -28,7 +28,7 @@ self.addEventListener('push', (event) => {
     badge: '/api/pwa-icon/192',
     vibrate: [400, 150, 400, 150, 600],
     requireInteraction: true,
-    tag: 'honksafe-alert',
+    tag: 'whopark-alert',
     renotify: true,
     data: { url: payload.url || '/dashboard' },
   };
