@@ -42,7 +42,7 @@ export default function CartoonLoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FFFDF0] flex flex-col justify-between p-4 sm:p-8 selection:bg-yellow-300">
+    <main className="min-h-screen bg-[#FFFDF0] text-black flex flex-col justify-between p-4 sm:p-8 selection:bg-yellow-300">
       {/* Top Bar */}
       <div className="max-w-md w-full mx-auto">
         <Link
@@ -119,7 +119,7 @@ export default function CartoonLoginPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="e.g. Aditya Vaste"
-                className="w-full bg-white border-3 border-black rounded-2xl px-4 py-3 text-sm font-bold shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
+                className="w-full bg-white text-black placeholder:text-stone-400 border-3 border-black rounded-2xl px-4 py-3 text-sm font-bold shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
               />
             </div>
           )}
@@ -134,7 +134,7 @@ export default function CartoonLoginPage() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+91 98765 43210"
-              className="w-full bg-white border-3 border-black rounded-2xl px-4 py-3 text-sm font-black font-mono shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
+              className="w-full bg-white text-black placeholder:text-stone-400 border-3 border-black rounded-2xl px-4 py-3 text-sm font-black font-mono shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
             />
           </div>
 
@@ -148,7 +148,7 @@ export default function CartoonLoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-white border-3 border-black rounded-2xl px-4 py-3 text-sm font-bold shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
+              className="w-full bg-white text-black placeholder:text-stone-400 border-3 border-black rounded-2xl px-4 py-3 text-sm font-black shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
             />
           </div>
 
