@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, boolean, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, boolean, timestamp, text } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -32,5 +32,15 @@ export const alertLogs = pgTable('alert_logs', {
   alertType: varchar('alert_type', { length: 30 }).notNull(),
   scannerIp: varchar('scanner_ip', { length: 45 }),
   status: varchar('status', { length: 20 }).default('SENT'),
+  ownerReply: varchar('owner_reply', { length: 120 }), // 👈 Quick reply from owner
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });

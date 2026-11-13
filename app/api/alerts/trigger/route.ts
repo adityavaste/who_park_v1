@@ -5,6 +5,19 @@ import { qrTags, alertLogs, vehicles, users } from '@/db/schema';
 import { eq, and, gte, or, desc } from 'drizzle-orm';
 import crypto from 'crypto';
 
+
+// Add at top of src/app/api/alerts/trigger/route.ts
+import webpush from 'web-push';
+import { pushSubscriptions } from '@/db/schema';
+
+if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || 'mailto:support@honksafe.in',
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -142,7 +155,45 @@ export async function POST(req: NextRequest) {
         maxAge: 30 * 24 * 60 * 60,
       });
     }
+// Fetch userId for this vehicle
+    const [ownerRecord] = await db
+      .select({ userId: vehicles.userId, plateNumber: vehicles.plateNumber })
+      .from(qrTags)
+      .innerJoin(vehicles, eq(qrTags.vehicleId, vehicles.id))
+      .where(eq(qrTags.id, tagId))
+      .limit(1);
 
+    if (ownerRecord && process.env.VAPID_PRIVATE_KEY) {
+      const subs = await db
+        .select()
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.userId, ownerRecord.userId));
+
+      const alertLabel =
+        alertType === 'OBSTRUCTION'
+          ? '🚗 Your car is blocking someone!'
+          : alertType === 'HEADLIGHTS'
+          ? '💡 Headlights or window left open!'
+          : '🚨 Urgent Tow / Emergency alert!';
+
+      const payload = JSON.stringify({
+        title: `🚨 ALERT: ${ownerRecord.plateNumber}`,
+        body: `${alertLabel} Tap to reply.`,
+        url: '/dashboard',
+      });
+
+      await Promise.allSettled(
+        subs.map((sub) =>
+          webpush.sendNotification(
+            {
+              endpoint: sub.endpoint,
+              keys: { p256dh: sub.p256dh, auth: sub.auth },
+            },
+            payload
+          )
+        )
+      );
+    }
     return response;
   } catch (error: any) {
     return NextResponse.json(
