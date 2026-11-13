@@ -235,7 +235,7 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
         </button>
 
         <span className="bg-yellow-400 text-black font-black text-xs px-3.5 py-1.5 rounded-full border-2 border-black uppercase tracking-wider">
-          🚕 HONKSAFE SCANNER
+          🚕 WHO PARK SCANNER
         </span>
 
         {hasTorch ? (

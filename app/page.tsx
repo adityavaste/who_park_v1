@@ -31,7 +31,7 @@ export default function HomePage() {
         <div className="flex items-center gap-2.5">
           <span className="text-2xl sm:text-3xl">🚕</span>
           <span className="font-black text-xl sm:text-2xl tracking-tight">
-            HONK<span className="text-yellow-500">SAFE</span>
+            WHO<span className="text-yellow-500">PARK</span>
           </span>
         </div>
 
