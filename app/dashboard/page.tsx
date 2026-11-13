@@ -53,6 +53,10 @@ export default function CartoonDashboardPage() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<{ phone: string; fullName: string | null } | null>(null);
 
+  // PWA Install states
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
   // Sound, Push & Steady Ringing States
   const [alertsActivated, setAlertsActivated] = useState(false);
   const [ringingAlert, setRingingAlert] = useState<AlertItem | null>(null);
@@ -64,6 +68,45 @@ export default function CartoonDashboardPage() {
   const [newModel, setNewModel] = useState('');
   const [newEmergency, setNewEmergency] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Listen for PWA Install prompt
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+    }
+
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  async function handleInstallApp() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    } else {
+      alert(
+        'To install HONKSAFE as an app:\n\n• Android Chrome: Tap the 3-dot menu (⋮) at top-right → "Add to Home screen" or "Install app".\n• iPhone Safari: Tap the Share button (↑) at bottom → "Add to Home Screen".'
+      );
+    }
+  }
 
   // Register Service Worker & Subscribe to Background Web Push
   async function registerBackgroundPush() {
@@ -139,7 +182,10 @@ export default function CartoonDashboardPage() {
   async function loadDashboardData(silent = false) {
     if (!silent) setLoading(true);
     try {
-      const res = await fetch('/api/owner/vehicles', { credentials: 'include' });
+      const res = await fetch(`/api/owner/vehicles?t=${Date.now()}`, {
+        credentials: 'include',
+        cache: 'no-store',
+      });
       if (res.status === 401) {
         router.push('/login');
         return;
@@ -172,7 +218,6 @@ export default function CartoonDashboardPage() {
   }
 
   useEffect(() => {
-    // Register SW silently on load if already granted
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       registerBackgroundPush();
     }
@@ -181,7 +226,7 @@ export default function CartoonDashboardPage() {
 
     const pollTimer = setInterval(() => {
       loadDashboardData(true);
-    }, 4000);
+    }, 3000);
 
     return () => {
       clearInterval(pollTimer);
@@ -270,7 +315,7 @@ export default function CartoonDashboardPage() {
         )}
       </nav>
 
-      {/* Background Push & Ringtone Activation Banner */}
+      {/* Background Push, Install App & Ringtone Banner */}
       <div
         className={`mb-6 p-4 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
           alertsActivated ? 'bg-emerald-200' : 'bg-yellow-300'
@@ -282,26 +327,41 @@ export default function CartoonDashboardPage() {
             <p className="text-xs sm:text-sm font-black text-black uppercase">
               {alertsActivated
                 ? 'Background Push & Ringtone Active!'
-                : 'Enable Background Alerts & Ringtone'}
+                : 'Enable Background Alerts & Install App'}
             </p>
             <p className="text-[11px] font-bold text-stone-800">
               {alertsActivated
-                ? 'You will receive alerts even when the app is closed. Install via "Add to Home Screen".'
-                : 'Tap once to allow ringtone sound & alerts even when your phone screen is off.'}
+                ? 'You will receive alerts even when the app is closed.'
+                : 'Install the app & enable sound to get alerts even when your screen is off.'}
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleEnableAlerts();
-          }}
-          className="bg-white hover:bg-yellow-50 active:translate-y-0.5 text-black font-black text-xs px-4 py-2.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] whitespace-nowrap transition"
-        >
-          {alertsActivated ? '🔊 TEST RING' : '🔔 ENABLE ALERTS'}
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {!isInstalled && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleInstallApp();
+              }}
+              className="bg-black hover:bg-stone-800 active:translate-y-0.5 text-yellow-400 font-black text-xs px-4 py-2.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#fff] whitespace-nowrap transition"
+            >
+              📲 INSTALL APP
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEnableAlerts();
+            }}
+            className="bg-white hover:bg-yellow-50 active:translate-y-0.5 text-black font-black text-xs px-4 py-2.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] whitespace-nowrap transition"
+          >
+            {alertsActivated ? '🔊 TEST RING' : '🔔 ENABLE ALERTS'}
+          </button>
+        </div>
       </div>
 
       {/* Dashboard Header Box */}

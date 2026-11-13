@@ -1,5 +1,5 @@
 // public/sw.js
-self.addEventListener('install', (event) => {
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
@@ -24,10 +24,10 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: payload.body,
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
+    icon: '/api/pwa-icon/192',
+    badge: '/api/pwa-icon/192',
     vibrate: [400, 150, 400, 150, 600],
-    requireInteraction: true, // Keeps notification visible until user taps it
+    requireInteraction: true,
     tag: 'honksafe-alert',
     renotify: true,
     data: { url: payload.url || '/dashboard' },
