@@ -29,19 +29,24 @@ function ScannerContent() {
   const [dailyBlocked, setDailyBlocked] = useState<boolean>(false);
   const [remainingToday, setRemainingToday] = useState<number | null>(null);
 
-  // Poll for the car owner's quick reply once an alert has been sent
+  // Poll for the car owner's quick reply once an alert has been sent (uncached)
   useEffect(() => {
     if (!activeAlertId || ownerReply) return;
 
-    const replyPoll = setInterval(async () => {
+    const checkReply = async () => {
       try {
-        const res = await fetch(`/api/alerts/status/${activeAlertId}`);
+        const res = await fetch(`/api/alerts/status/${activeAlertId}?t=${Date.now()}`, {
+          cache: 'no-store',
+        });
         const data = await res.json();
         if (data.success && data.ownerReply) {
           setOwnerReply(data.ownerReply);
         }
       } catch {}
-    }, 3000);
+    };
+
+    checkReply();
+    const replyPoll = setInterval(checkReply, 2500);
 
     return () => clearInterval(replyPoll);
   }, [activeAlertId, ownerReply]);
