@@ -4,9 +4,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import QrScannerModal from '@/components/QrScannerModal';
 
 export default function HomePage() {
   const router = useRouter();
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [tagCode, setTagCode] = useState('');
 
@@ -15,7 +17,6 @@ export default function HomePage() {
     const cleanCode = tagCode.trim();
     if (!cleanCode) return;
 
-    // Extract slug if the user pasted a full URL (e.g., https://app.com/v/abc12345)
     const slug = cleanCode.includes('/v/')
       ? cleanCode.split('/v/')[1].split('/')[0]
       : cleanCode;
@@ -44,12 +45,10 @@ export default function HomePage() {
 
       {/* Center Hero Section */}
       <section className="max-w-4xl w-full mx-auto my-12 text-center">
-        {/* Comic Badge */}
         <div className="inline-block bg-yellow-300 border-3 border-black px-4 py-1.5 rounded-full font-black text-xs uppercase tracking-widest shadow-[4px_4px_0px_#000] -rotate-2 mb-6">
           ★ 100% Anonymous Car Alerts ★
         </div>
 
-        {/* Main Headline */}
         <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-none text-black">
           BLOCKED BY A CAR?
           <span className="block mt-2 bg-yellow-400 inline-block px-4 py-1 border-4 border-black rounded-2xl shadow-[6px_6px_0px_#000] rotate-1">
@@ -63,7 +62,7 @@ export default function HomePage() {
 
         {/* Two Main Action Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mt-10 text-left">
-          {/* Option 1: Scan QR / Contact Owner */}
+          {/* Option 1: Live Camera Scan + Manual Code */}
           <div className="bg-yellow-400 border-4 border-black rounded-3xl p-6 sm:p-8 shadow-[8px_8px_0px_#000] flex flex-col justify-between relative">
             <div className="absolute -top-4 -right-3 bg-white border-3 border-black px-3 py-1 rounded-full font-black text-xs rotate-6 shadow-[3px_3px_0px_#000]">
               FOR PUBLIC
@@ -77,41 +76,47 @@ export default function HomePage() {
                 SCAN QR & CONTACT OWNER
               </h2>
               <p className="text-xs sm:text-sm font-bold text-black/80 mt-2 leading-relaxed">
-                Found a car blocking your driveway or with headlights left on? Open your phone camera or enter the sticker ID below.
+                Found a car blocking your path or with lights left on? Scan the windshield sticker right now!
               </p>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-6 space-y-3">
+              {/* Primary Live Camera Button */}
+              <button
+                onClick={() => setIsScannerOpen(true)}
+                className="w-full bg-white hover:bg-yellow-50 active:translate-x-1 active:translate-y-1 active:shadow-none text-black font-black text-sm sm:text-base py-4 px-5 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition-all flex items-center justify-between"
+              >
+                <span className="flex items-center gap-2.5">
+                  <span className="text-xl">📸</span>
+                  <span>OPEN CAMERA SCANNER</span>
+                </span>
+                <span className="text-xl">➔</span>
+              </button>
+
+              {/* Secondary Manual Code Toggle */}
               {!showCodeInput ? (
                 <button
                   onClick={() => setShowCodeInput(true)}
-                  className="w-full bg-white hover:bg-yellow-50 active:translate-x-1 active:translate-y-1 active:shadow-none text-black font-black text-sm sm:text-base py-4 px-5 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition-all flex items-center justify-between"
+                  className="w-full text-center text-xs font-black text-black/80 hover:text-black underline pt-1"
                 >
-                  <span>ENTER STICKER CODE / SCAN</span>
-                  <span className="text-xl">➔</span>
+                  Or type sticker code manually
                 </button>
               ) : (
-                <form onSubmit={handleGoToVehicle} className="space-y-2.5">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      required
-                      autoFocus
-                      placeholder="e.g. a9b2c3d4"
-                      value={tagCode}
-                      onChange={(e) => setTagCode(e.target.value)}
-                      className="flex-1 bg-white border-3 border-black rounded-xl px-3.5 py-3 text-sm font-black font-mono shadow-[3px_3px_0px_#000] focus:outline-none"
-                    />
-                    <button
-                      type="submit"
-                      className="bg-black text-yellow-400 font-black text-sm px-5 py-3 rounded-xl border-3 border-black shadow-[3px_3px_0px_#fff] hover:bg-stone-800 transition"
-                    >
-                      GO!
-                    </button>
-                  </div>
-                  <p className="text-[11px] font-black text-black/75">
-                    💡 Tip: You can also scan the QR sticker directly with your phone’s normal camera app!
-                  </p>
+                <form onSubmit={handleGoToVehicle} className="pt-1 flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. a9b2c3d4"
+                    value={tagCode}
+                    onChange={(e) => setTagCode(e.target.value)}
+                    className="flex-1 bg-white border-3 border-black rounded-xl px-3.5 py-2.5 text-sm font-black font-mono shadow-[3px_3px_0px_#000] focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-black text-yellow-400 font-black text-xs px-4 py-2.5 rounded-xl border-3 border-black hover:bg-stone-800 transition"
+                  >
+                    GO!
+                  </button>
                 </form>
               )}
             </div>
@@ -154,7 +159,12 @@ export default function HomePage() {
           🛡️ ZERO SPAM • PRIVACY FIRST • BUILT FOR SMART PARKING
         </div>
       </footer>
+
+      {/* Live Camera QR Scanner Modal */}
+      <QrScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+      />
     </main>
   );
-  
 }
