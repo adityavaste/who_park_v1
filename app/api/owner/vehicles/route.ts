@@ -1,3 +1,4 @@
+// src/app/api/owner/vehicles/route.ts
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { vehicles, qrTags, alertLogs, users } from '@/db/schema';
@@ -37,8 +38,11 @@ export async function GET() {
           alertType: alertLogs.alertType,
           status: alertLogs.status,
           createdAt: alertLogs.createdAt,
+          plateNumber: vehicles.plateNumber,
         })
         .from(alertLogs)
+        .innerJoin(qrTags, eq(alertLogs.tagId, qrTags.id))
+        .innerJoin(vehicles, eq(qrTags.vehicleId, vehicles.id))
         .where(inArray(alertLogs.tagId, tagIds))
         .orderBy(desc(alertLogs.createdAt))
         .limit(20);
