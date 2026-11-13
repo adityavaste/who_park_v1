@@ -1,10 +1,16 @@
 // src/app/dashboard/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import QrScannerModal from '@/components/QrScannerModal';
+import {
+  unlockAudio,
+  playSingleAlertChime,
+  startContinuousRing,
+  stopContinuousRing,
+} from '@/lib/ringtone';
 
 interface VehicleItem {
   id: string;
@@ -21,6 +27,7 @@ interface AlertItem {
   alertType: string;
   status: string;
   createdAt: string;
+  plateNumber?: string;
 }
 
 export default function CartoonDashboardPage() {
@@ -32,13 +39,59 @@ export default function CartoonDashboardPage() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<{ phone: string; fullName: string | null } | null>(null);
 
+  // Sound & Live Ringing States
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [ringingAlert, setRingingAlert] = useState<AlertItem | null>(null);
+  const latestAlertIdRef = useRef<string | null>(null);
+  const isFirstLoadRef = useRef<boolean>(true);
+
   const [newPlate, setNewPlate] = useState('');
   const [newModel, setNewModel] = useState('');
   const [newEmergency, setNewEmergency] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function loadDashboardData() {
-    setLoading(true);
+  // Enable sound + browser notifications on tap
+  async function handleEnableSound() {
+    const unlocked = unlockAudio();
+    if (unlocked) {
+      setSoundEnabled(true);
+      playSingleAlertChime();
+    }
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        await Notification.requestPermission();
+      }
+    }
+  }
+
+  function triggerIncomingAlertRing(newAlert: AlertItem) {
+    setRingingAlert(newAlert);
+    startContinuousRing();
+
+    // Also fire system browser notification if permitted
+    if (
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      Notification.permission === 'granted'
+    ) {
+      new Notification(`🚨 CAR ALERT: ${newAlert.plateNumber || 'Your Vehicle'}`, {
+        body:
+          newAlert.alertType === 'OBSTRUCTION'
+            ? 'Your car is blocking someone! Please move it.'
+            : newAlert.alertType === 'HEADLIGHTS'
+            ? 'Headlights or window left open!'
+            : 'Urgent emergency alert on your vehicle!',
+      });
+    }
+  }
+
+  function handleStopRing() {
+    stopContinuousRing();
+    setRingingAlert(null);
+  }
+
+  async function loadDashboardData(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const res = await fetch('/api/owner/vehicles', { credentials: 'include' });
       if (res.status === 401) {
@@ -48,21 +101,47 @@ export default function CartoonDashboardPage() {
       const data = await res.json();
       if (data.success) {
         setVehiclesList(data.vehicles || []);
-        setAlerts(data.alerts || []);
+        const incomingAlerts: AlertItem[] = data.alerts || [];
+        setAlerts(incomingAlerts);
         if (data.user) setUserInfo(data.user);
+
+        // Detect brand new incoming alert compared to last check
+        if (incomingAlerts.length > 0) {
+          const newest = incomingAlerts[0];
+          if (isFirstLoadRef.current) {
+            latestAlertIdRef.current = newest.id;
+            isFirstLoadRef.current = false;
+          } else if (latestAlertIdRef.current !== newest.id) {
+            latestAlertIdRef.current = newest.id;
+            triggerIncomingAlertRing(newest);
+          }
+        } else {
+          isFirstLoadRef.current = false;
+        }
       }
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
+  // Initial load + 4-second live background polling for incoming alerts
   useEffect(() => {
-    loadDashboardData();
+    loadDashboardData(false);
+
+    const pollTimer = setInterval(() => {
+      loadDashboardData(true);
+    }, 4000);
+
+    return () => {
+      clearInterval(pollTimer);
+      stopContinuousRing();
+    };
   }, []);
 
   async function handleLogout() {
+    stopContinuousRing();
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/login');
   }
@@ -86,7 +165,7 @@ export default function CartoonDashboardPage() {
         setNewPlate('');
         setNewModel('');
         setNewEmergency('');
-        loadDashboardData();
+        loadDashboardData(false);
       } else {
         alert(data.error || 'Failed to add vehicle');
       }
@@ -108,7 +187,15 @@ export default function CartoonDashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FFFDF0] pt-6 pb-32 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto selection:bg-yellow-300">
+    <main
+      onClick={() => {
+        // Automatically unlock mobile audio on any tap inside dashboard
+        if (!soundEnabled && unlockAudio()) {
+          setSoundEnabled(true);
+        }
+      }}
+      className="min-h-screen bg-[#FFFDF0] pt-6 pb-32 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto selection:bg-yellow-300"
+    >
       {/* Top Navigation Bar */}
       <nav className="flex items-center justify-between mb-6">
         <Link
@@ -134,6 +221,40 @@ export default function CartoonDashboardPage() {
           </Link>
         )}
       </nav>
+
+      {/* Sound / Ringtone Activation Banner */}
+      <div
+        className={`mb-6 p-4 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+          soundEnabled ? 'bg-emerald-200' : 'bg-yellow-300'
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">{soundEnabled ? '🔔' : '🔕'}</span>
+          <div>
+            <p className="text-xs sm:text-sm font-black text-black uppercase">
+              {soundEnabled
+                ? 'Live Ringtone Active — Mobile Will Ring on Alert!'
+                : 'Tap to Enable Live Ringtone & Sound Alerts'}
+            </p>
+            <p className="text-[11px] font-bold text-stone-800">
+              {soundEnabled
+                ? 'Keep this tab open when parked; your phone will ring & vibrate when scanned.'
+                : 'Mobile browsers require one tap to allow incoming alert sounds.'}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleEnableSound();
+          }}
+          className="bg-white hover:bg-yellow-50 active:translate-y-0.5 text-black font-black text-xs px-4 py-2.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] whitespace-nowrap transition"
+        >
+          {soundEnabled ? '🔊 TEST RING' : '🔔 ENABLE SOUND'}
+        </button>
+      </div>
 
       {/* Dashboard Header Box */}
       <header className="bg-white border-4 border-black p-6 rounded-3xl shadow-[8px_8px_0px_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -248,9 +369,14 @@ export default function CartoonDashboardPage() {
 
       {/* Alert Logs */}
       <section className="mt-12">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-2xl">⚡</span>
-          <h2 className="text-xl font-black text-black">MY ALERTS & HONKS LOG</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">⚡</span>
+            <h2 className="text-xl font-black text-black">MY ALERTS & HONKS LOG</h2>
+          </div>
+          <span className="text-[11px] font-black text-emerald-700 bg-emerald-100 border-2 border-black px-2.5 py-0.5 rounded-full">
+            ● LIVE
+          </span>
         </div>
 
         <div className="bg-white rounded-3xl border-4 border-black shadow-[8px_8px_0px_#000] overflow-hidden">
@@ -272,13 +398,20 @@ export default function CartoonDashboardPage() {
                       {al.alertType === 'EMERGENCY' && '🚨'}
                     </span>
                     <div>
-                      <p className="font-black text-black text-sm">
-                        {al.alertType === 'OBSTRUCTION' && 'CAR BLOCKING PATH!'}
-                        {al.alertType === 'HEADLIGHTS' && 'LIGHTS OR WINDOW OPEN'}
-                        {al.alertType === 'EMERGENCY' && 'EMERGENCY / TOW ALERT!'}
-                        {!['OBSTRUCTION', 'HEADLIGHTS', 'EMERGENCY'].includes(al.alertType) && al.alertType}
-                      </p>
-                      <p className="text-xs font-bold text-stone-500 font-mono">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {al.plateNumber && (
+                          <span className="font-mono text-xs font-black bg-yellow-300 px-2 py-0.5 rounded border border-black text-black">
+                            {al.plateNumber}
+                          </span>
+                        )}
+                        <p className="font-black text-black text-sm">
+                          {al.alertType === 'OBSTRUCTION' && 'CAR BLOCKING PATH!'}
+                          {al.alertType === 'HEADLIGHTS' && 'LIGHTS OR WINDOW OPEN'}
+                          {al.alertType === 'EMERGENCY' && 'EMERGENCY / TOW ALERT!'}
+                          {!['OBSTRUCTION', 'HEADLIGHTS', 'EMERGENCY'].includes(al.alertType) && al.alertType}
+                        </p>
+                      </div>
+                      <p className="text-xs font-bold text-stone-500 font-mono mt-0.5">
                         {new Date(al.createdAt).toLocaleString('en-IN', {
                           dateStyle: 'medium',
                           timeStyle: 'short',
@@ -309,6 +442,40 @@ export default function CartoonDashboardPage() {
         </button>
       </div>
 
+      {/* INCOMING RINGING CALL-STYLE ALERT POPUP */}
+      {ringingAlert && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-yellow-400 rounded-3xl max-w-sm w-full p-7 border-4 border-black shadow-[10px_10px_0px_#fff] text-center animate-bounce">
+            <div className="w-20 h-20 bg-white border-4 border-black rounded-full flex items-center justify-center text-4xl mx-auto shadow-[4px_4px_0px_#000]">
+              🚨
+            </div>
+
+            <div className="inline-block bg-black text-yellow-400 text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest mt-4">
+              INCOMING VEHICLE PING!
+            </div>
+
+            {ringingAlert.plateNumber && (
+              <div className="mt-3 bg-white border-3 border-black rounded-2xl py-2 px-4 font-mono font-black text-2xl text-black tracking-widest">
+                {ringingAlert.plateNumber}
+              </div>
+            )}
+
+            <h3 className="text-xl font-black text-black mt-3 uppercase">
+              {ringingAlert.alertType === 'OBSTRUCTION' && '🚗 YOUR CAR IS BLOCKING SOMEONE!'}
+              {ringingAlert.alertType === 'HEADLIGHTS' && '💡 HEADLIGHTS OR WINDOW OPEN!'}
+              {ringingAlert.alertType === 'EMERGENCY' && '🚨 URGENT TOW / EMERGENCY!'}
+            </h3>
+
+            <button
+              onClick={handleStopRing}
+              className="mt-6 w-full bg-rose-500 hover:bg-rose-400 active:translate-y-1 text-white font-black text-base py-4 px-6 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition"
+            >
+              🔕 STOP RING & ACKNOWLEDGE
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Add Vehicle Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
@@ -332,7 +499,7 @@ export default function CartoonDashboardPage() {
                   placeholder="MH 12 AB 1234"
                   value={newPlate}
                   onChange={(e) => setNewPlate(e.target.value)}
-                  className="w-full bg-white border-3 border-black rounded-2xl px-4 py-3 text-sm font-black font-mono shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
+                  className="w-full bg-white text-black placeholder:text-stone-400 border-3 border-black rounded-2xl px-4 py-3 text-sm font-black font-mono shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
                 />
               </div>
 
@@ -345,7 +512,7 @@ export default function CartoonDashboardPage() {
                   placeholder="Tata Zest, Hyundai Creta"
                   value={newModel}
                   onChange={(e) => setNewModel(e.target.value)}
-                  className="w-full bg-white border-3 border-black rounded-2xl px-4 py-3 text-sm font-bold shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
+                  className="w-full bg-white text-black placeholder:text-stone-400 border-3 border-black rounded-2xl px-4 py-3 text-sm font-bold shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
                 />
               </div>
 
@@ -358,7 +525,7 @@ export default function CartoonDashboardPage() {
                   placeholder="+91 98765 00000"
                   value={newEmergency}
                   onChange={(e) => setNewEmergency(e.target.value)}
-                  className="w-full bg-white border-3 border-black rounded-2xl px-4 py-3 text-sm font-bold shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
+                  className="w-full bg-white text-black placeholder:text-stone-400 border-3 border-black rounded-2xl px-4 py-3 text-sm font-bold shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
                 />
               </div>
 
