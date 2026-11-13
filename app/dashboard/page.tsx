@@ -1,8 +1,10 @@
+// src/app/dashboard/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import QrScannerModal from '@/components/QrScannerModal';
 
 interface VehicleItem {
   id: string;
@@ -27,6 +29,7 @@ export default function CartoonDashboardPage() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<{ phone: string; fullName: string | null } | null>(null);
 
   const [newPlate, setNewPlate] = useState('');
@@ -105,7 +108,7 @@ export default function CartoonDashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FFFDF0] py-6 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto selection:bg-yellow-300">
+    <main className="min-h-screen bg-[#FFFDF0] pt-6 pb-32 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto selection:bg-yellow-300">
       {/* Top Navigation Bar */}
       <nav className="flex items-center justify-between mb-6">
         <Link
@@ -220,22 +223,22 @@ export default function CartoonDashboardPage() {
                   </div>
                 </div>
 
-                {/* Actions */}
+                {/* Printable Sticker Card + Raw PNG Download */}
                 <div className="mt-6 flex items-center gap-3">
+                  <Link
+                    href={`/dashboard/sticker/${veh.tagSlug}`}
+                    className="flex-1 text-center bg-yellow-400 hover:bg-yellow-300 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-black font-black text-xs py-3.5 px-3 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000] transition"
+                  >
+                    🖨️ PRINT STICKER CARD
+                  </Link>
                   <a
                     href={`/api/qr/image/${veh.tagSlug}`}
                     download={`${veh.plateNumber}-QR.png`}
-                    className="flex-1 text-center bg-white hover:bg-stone-50 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-black font-black text-xs py-3 px-3 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000] transition"
+                    className="bg-white hover:bg-stone-50 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-black font-black text-xs py-3.5 px-3.5 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000] transition"
+                    title="Download Raw QR PNG"
                   >
-                    💾 DOWNLOAD QR
+                    💾 PNG
                   </a>
-                  <Link
-                    href={`/v/${veh.tagSlug}`}
-                    target="_blank"
-                    className="flex-1 text-center bg-yellow-400 hover:bg-yellow-300 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-black font-black text-xs py-3 px-3 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000] transition"
-                  >
-                    👀 OPEN SCAN PAGE
-                  </Link>
                 </div>
               </div>
             ))}
@@ -292,6 +295,19 @@ export default function CartoonDashboardPage() {
           )}
         </div>
       </section>
+
+      {/* PhonePe / GPay Style Floating Bottom Scan Button */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
+        <button
+          onClick={() => setIsScannerOpen(true)}
+          className="bg-yellow-400 hover:bg-yellow-300 active:translate-y-1 active:shadow-none text-black font-black text-sm sm:text-base px-7 py-4 rounded-full border-4 border-black shadow-[0_8px_0px_#000] flex items-center gap-3 transition-all whitespace-nowrap"
+        >
+          <span className="bg-black text-yellow-400 w-9 h-9 rounded-full flex items-center justify-center text-lg">
+            📸
+          </span>
+          <span>SCAN ANY CAR QR</span>
+        </button>
+      </div>
 
       {/* Add Vehicle Modal */}
       {showAddModal && (
@@ -366,6 +382,12 @@ export default function CartoonDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Fullscreen PhonePe / GPay Style QR Scanner */}
+      <QrScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+      />
     </main>
   );
 }
