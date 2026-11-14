@@ -45,6 +45,7 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export default function CartoonDashboardPage() {
+  const [appOrigin, setAppOrigin] = useState<string>('https://who-park-v1.vercel.app');
   const router = useRouter();
   const [vehiclesList, setVehiclesList] = useState<VehicleItem[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
@@ -69,6 +70,12 @@ export default function CartoonDashboardPage() {
   const [newEmergency, setNewEmergency] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setAppOrigin(window.location.origin);
+    }
+  }, []);
   // Listen for PWA Install prompt
   useEffect(() => {
     if (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) {
@@ -317,9 +324,8 @@ export default function CartoonDashboardPage() {
 
       {/* Background Push, Install App & Ringtone Banner */}
       <div
-        className={`mb-6 p-4 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
-          alertsActivated ? 'bg-emerald-200' : 'bg-yellow-300'
-        }`}
+        className={`mb-6 p-4 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${alertsActivated ? 'bg-emerald-200' : 'bg-yellow-300'
+          }`}
       >
         <div className="flex items-center gap-3">
           <span className="text-2xl">{alertsActivated ? '🔔' : '📲'}</span>
@@ -437,7 +443,7 @@ export default function CartoonDashboardPage() {
                   <div className="mt-5 bg-yellow-100 border-3 border-black p-4 rounded-2xl flex items-center gap-4 shadow-[4px_4px_0px_#000]">
                     <div className="bg-white p-2 rounded-xl border-2 border-black flex-shrink-0">
                       <img
-                        src={`/api/qr/image/${veh.tagSlug}`}
+                        src={`/api/qr/image/${veh.tagSlug}?origin=${encodeURIComponent(appOrigin)}`}
                         alt="QR Code"
                         className="w-20 h-20 object-contain"
                       />
@@ -459,7 +465,7 @@ export default function CartoonDashboardPage() {
                     🖨️ PRINT STICKER CARD
                   </Link>
                   <a
-                    href={`/api/qr/image/${veh.tagSlug}`}
+                    href={`/api/qr/image/${veh.tagSlug}?origin=${encodeURIComponent(appOrigin)}`}
                     download={`${veh.plateNumber}-QR.png`}
                     className="bg-white hover:bg-stone-50 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-black font-black text-xs py-3.5 px-3.5 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000] transition"
                     title="Download Raw QR PNG"

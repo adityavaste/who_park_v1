@@ -12,6 +12,8 @@ interface VehicleDetails {
 }
 
 function StickerPrintContent() {
+  const [appOrigin, setAppOrigin] = useState<string>('https://who-park-v1.vercel.app');
+
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug as string;
@@ -19,6 +21,12 @@ function StickerPrintContent() {
   const [vehicle, setVehicle] = useState<VehicleDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setAppOrigin(window.location.origin);
+    }
+  }, []);
 
   useEffect(() => {
     if (!slug) return;
@@ -149,7 +157,7 @@ function StickerPrintContent() {
             {/* Crisp White QR Frame */}
             <div className="bg-white p-2.5 rounded-2xl border-4 border-black shadow-[4px_4px_0px_#000] print:shadow-none my-1">
               <img
-                src={`/api/qr/image/${vehicle.tagSlug}`}
+                src={`/api/qr/image/${vehicle.tagSlug}?origin=${encodeURIComponent(appOrigin)}`}
                 alt={`QR Sticker for ${vehicle.plateNumber}`}
                 className="w-36 h-36 object-contain block"
               />
