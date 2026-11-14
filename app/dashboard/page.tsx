@@ -103,7 +103,7 @@ export default function CartoonDashboardPage() {
       }
     } else {
       alert(
-        'To install HONKSAFE as an app:\n\n• Android Chrome: Tap the 3-dot menu (⋮) at top-right → "Add to Home screen" or "Install app".\n• iPhone Safari: Tap the Share button (↑) at bottom → "Add to Home Screen".'
+        'To install WHO PARK as an app:\n\n• Android Chrome: Tap the 3-dot menu (⋮) at top-right → "Add to Home screen" or "Install app".\n• iPhone Safari: Tap the Share button (↑) at bottom → "Add to Home Screen".'
       );
     }
   }
@@ -295,7 +295,7 @@ export default function CartoonDashboardPage() {
           href="/"
           className="inline-flex items-center gap-2 bg-white hover:bg-yellow-100 text-black font-black text-xs px-4 py-2 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] transition"
         >
-          🚕 HONKSAFE HOME
+          🚕 WHO PARK HOME
         </Link>
 
         {userInfo ? (
