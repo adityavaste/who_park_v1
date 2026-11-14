@@ -1,3 +1,4 @@
+// src/app/api/qr/image/[slug]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import QRCode from 'qrcode';
 import { db } from '@/db';
@@ -16,7 +17,14 @@ export async function GET(
       return NextResponse.json({ error: 'QR Tag not found' }, { status: 404 });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // Automatically detect the live domain from the request headers
+    const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
+    const proto = req.headers.get('x-forwarded-proto') || (host?.includes('localhost') ? 'http' : 'https');
+
+    const baseUrl = host
+      ? `${proto}://${host}`
+      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
     const qrBuffer = await QRCode.toBuffer(`${baseUrl}/v/${slug}`, {
       type: 'png',
       width: 512,
@@ -28,7 +36,7 @@ export async function GET(
       status: 200,
       headers: {
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Cache-Control': 'no-store, max-age=0',
       },
     });
   } catch (error: any) {
