@@ -45,7 +45,7 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export default function CartoonDashboardPage() {
-  const [appOrigin, setAppOrigin] = useState<string>('https://who-park-v1.vercel.app');
+  const [appOrigin, setAppOrigin] = useState<string>('https://whopark.in');
   const router = useRouter();
   const [vehiclesList, setVehiclesList] = useState<VehicleItem[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);

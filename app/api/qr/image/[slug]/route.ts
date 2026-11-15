@@ -32,7 +32,7 @@ export async function GET(
       (host && !host.includes('localhost') ? `${proto}://${host}` : null) ||
       vercelProdUrl ||
       process.env.NEXT_PUBLIC_APP_URL ||
-      'https://who-park-v1.vercel.app';
+      'https://whopark.in';
 
     const qrBuffer = await QRCode.toBuffer(`${baseUrl}/v/${slug}`, {
       type: 'png',

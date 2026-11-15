@@ -12,7 +12,7 @@ interface VehicleDetails {
 }
 
 function StickerPrintContent() {
-  const [appOrigin, setAppOrigin] = useState<string>('https://who-park-v1.vercel.app');
+  const [appOrigin, setAppOrigin] = useState<string>('https://whopark.in');
 
   const params = useParams();
   const router = useRouter();

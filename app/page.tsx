@@ -158,6 +158,12 @@ export default function HomePage() {
         <div className="inline-block bg-white border-3 border-black px-4 py-2 rounded-2xl shadow-[4px_4px_0px_#000] text-xs font-black text-stone-700">
           🛡️ ZERO SPAM • PRIVACY FIRST • BUILT FOR SMART PARKING
         </div>
+        <Link
+          href="/parking-solutions"
+          className="underline font-black text-black hover:text-stone-700 px-7"
+        >
+          Wrong Parking Solutions & FAQ
+        </Link>
       </footer>
 
       {/* Live Camera QR Scanner Modal */}

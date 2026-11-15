@@ -3,9 +3,9 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'WHO PARK — Smart Car Alert',
-    short_name: 'WHO PARK',
-    description: 'Anonymous QR vehicle alerts & instant owner notifications',
+    name: 'Who Park — Smart Car Parking Alert',
+    short_name: 'Who Park',
+    description: 'Scan windshield QR to alert parked car owners privately without sharing phone numbers.',
     start_url: '/dashboard',
     display: 'standalone',
     background_color: '#FFFDF0',
