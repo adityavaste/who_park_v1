@@ -1,5 +1,5 @@
 // public/sw.js
-self.addEventListener('install', () => {
+self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
@@ -8,28 +8,29 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-  let data = {
+  let payload = {
     title: '🚨 WHO PARK ALERT!',
     body: 'Someone scanned your vehicle QR sticker!',
     url: '/dashboard',
   };
 
-  try {
-    if (event.data) {
-      data = { ...data, ...event.data.json() };
+  if (event.data) {
+    try {
+      const parsed = event.data.json();
+      payload = { ...payload, ...parsed };
+    } catch {
+      payload.body = event.data.text() || payload.body;
     }
-  } catch {}
+  }
 
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: '/icon-192x192.png',
-      badge: '/icon-192x192.png',
-      vibrate: [400, 150, 400, 150, 600],
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      vibrate: [500, 200, 500, 200, 800],
       requireInteraction: true,
-      tag: 'whopark-urgent-alert',
+      tag: `whopark-alert-${Date.now()}`,
       renotify: true,
-      data: { url: data.url || '/dashboard' },
+      data: { url: payload.url || '/dashboard' },
     })
   );
 });
@@ -39,14 +40,14 @@ self.addEventListener('notificationclick', (event) => {
   const targetUrl = event.notification.data?.url || '/dashboard';
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if (client.url.includes('/dashboard') && 'focus' in client) {
           return client.focus();
         }
       }
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
       }
     })
   );

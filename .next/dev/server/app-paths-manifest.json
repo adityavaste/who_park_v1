@@ -1,5 +1,1 @@
-{
-  "/_not-found/page": "app/_not-found/page.js",
-  "/api/pwa-icon/[size]/route": "app/api/pwa-icon/[size]/route.js",
-  "/manifest.webmanifest/route": "app/manifest.webmanifest/route.js"
-}
+{}
