@@ -1,5 +1,5 @@
 // lib/sendPush.ts
-import webpush from 'web-push';
+import * as webpush from 'web-push';
 import { db } from '@/db';
 import { pushSubscriptions } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -45,7 +45,6 @@ export async function sendPushToOwner(
           })
         );
       } catch (err: any) {
-        // Automatically clean up expired or unsubscribed browser endpoints
         if (err?.statusCode === 404 || err?.statusCode === 410) {
           await db
             .delete(pushSubscriptions)
