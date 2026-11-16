@@ -4,6 +4,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
 import QrScannerModal from '@/components/QrScannerModal';
 import { createReceiverConnection } from '@/lib/webrtcCall';
 import {
@@ -159,7 +161,10 @@ export default function CartoonDashboardPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setAppOrigin(window.location.origin);
-      if (window.matchMedia('(display-mode: standalone)').matches) {
+      if (
+        Capacitor.isNativePlatform() ||
+        window.matchMedia('(display-mode: standalone)').matches
+      ) {
         setIsInstalled(true);
       }
     }
@@ -197,7 +202,54 @@ export default function CartoonDashboardPage() {
     }
   }
 
+  async function registerNativeAndroidPush(): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) return false;
+
+    try {
+      let permStatus = await PushNotifications.checkPermissions();
+      if (permStatus.receive === 'prompt') {
+        permStatus = await PushNotifications.requestPermissions();
+      }
+      if (permStatus.receive !== 'granted') return false;
+
+      await PushNotifications.createChannel({
+        id: 'whopark_urgent',
+        name: 'WHO PARK Urgent Vehicle Alerts',
+        description: 'Immediate alerts when someone scans your parked car QR',
+        importance: 5,
+        visibility: 1,
+        lights: true,
+        vibration: true,
+      });
+
+      await PushNotifications.removeAllListeners();
+
+      await PushNotifications.addListener('registration', async (token) => {
+        await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fcmToken: token.value }),
+        });
+        setAlertsActivated(true);
+      });
+
+      await PushNotifications.addListener('pushNotificationActionPerformed', () => {
+        loadDashboardData(false);
+      });
+
+      await PushNotifications.register();
+      return true;
+    } catch (err) {
+      console.error('Native FCM setup error:', err);
+      return false;
+    }
+  }
+
   async function registerBackgroundPush(forceRefresh = false): Promise<boolean> {
+    if (Capacitor.isNativePlatform()) {
+      return await registerNativeAndroidPush();
+    }
+
     if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
       if (forceRefresh) {
         alert('Background push is not supported in this browser. On iPhone, tap Share → Add to Home Screen first.');
@@ -381,7 +433,9 @@ export default function CartoonDashboardPage() {
   }
 
   useEffect(() => {
-    if (
+    if (Capacitor.isNativePlatform()) {
+      registerNativeAndroidPush();
+    } else if (
       typeof window !== 'undefined' &&
       'Notification' in window &&
       Notification.permission === 'granted'

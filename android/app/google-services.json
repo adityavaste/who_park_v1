@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "368085102522",
+    "project_id": "whopark-9e812",
+    "storage_bucket": "whopark-9e812.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:368085102522:android:3289141874dac0ba12f783",
+        "android_client_info": {
+          "package_name": "in.whopark.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "368085102522-e57qq06r7m2ds555oa3ikh7jc69v9c90.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLNwWJXJBQEvy5KrzVhe_Q5Cdj1Ujor44"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "368085102522-e57qq06r7m2ds555oa3ikh7jc69v9c90.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -12,12 +12,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { subscription } = await req.json();
+    const body = await req.json();
+
+    // 1. Native Android / Capacitor FCM Token
+    if (body.fcmToken && typeof body.fcmToken === 'string') {
+      const fcmEndpoint = `fcm://${body.fcmToken}`;
+
+      await db
+        .delete(pushSubscriptions)
+        .where(eq(pushSubscriptions.endpoint, fcmEndpoint));
+
+      await db.insert(pushSubscriptions).values({
+        userId: session.userId,
+        endpoint: fcmEndpoint,
+        p256dh: 'NATIVE_FCM',
+        auth: 'NATIVE_FCM',
+      });
+
+      return NextResponse.json({ success: true, type: 'FCM' });
+    }
+
+    // 2. Standard Browser Web Push Subscription (Fallback)
+    const { subscription } = body;
     if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
       return NextResponse.json({ error: 'Invalid push subscription' }, { status: 400 });
     }
 
-    // Remove any existing row for this device endpoint, then insert fresh
     await db
       .delete(pushSubscriptions)
       .where(eq(pushSubscriptions.endpoint, subscription.endpoint));
@@ -29,7 +49,7 @@ export async function POST(req: NextRequest) {
       auth: subscription.keys.auth,
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, type: 'WEB_PUSH' });
   } catch (error: any) {
     console.error('[PUSH SUBSCRIBE ERROR]:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
