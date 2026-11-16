@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       .values({ phone: cleanPhone, fullName: fullName || null, password: hashedPassword })
       .returning();
 
-    const token = await createToken(newUser.id, newUser.phone);
+    const token = await createToken({ userId: newUser.id, phone: newUser.phone });
     const response = NextResponse.json({ success: true });
     response.cookies.set('session_token', token, {
       httpOnly: true,
