@@ -49,7 +49,7 @@ export async function sendPushToOwner(
             url: payload.url || '/dashboard',
           }),
           {
-            TTL: 60,
+            TTL: 3600,
             urgency: 'high',
           }
         );
