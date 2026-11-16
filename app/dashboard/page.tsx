@@ -197,41 +197,84 @@ export default function CartoonDashboardPage() {
     }
   }
 
-  async function registerBackgroundPush() {
+  async function registerBackgroundPush(forceRefresh = false): Promise<boolean> {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-      return;
+      if (forceRefresh) {
+        alert('Background push is not supported in this browser. On iPhone, tap Share → Add to Home Screen first.');
+      }
+      return false;
     }
 
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
+      const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
       await navigator.serviceWorker.ready;
 
       const permission = await Notification.requestPermission();
-      if (permission !== 'granted') return;
+      if (permission !== 'granted') {
+        if (forceRefresh) {
+          alert('Please allow Notifications in your browser/phone settings to receive background alerts.');
+        }
+        return false;
+      }
 
       const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (!vapidPublicKey) return;
+      if (!vapidPublicKey) {
+        if (forceRefresh) {
+          alert('NEXT_PUBLIC_VAPID_PUBLIC_KEY is missing in Vercel Environment Variables!');
+        }
+        return false;
+      }
 
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-      });
+      let subscription = await registration.pushManager.getSubscription();
 
-      await fetch('/api/push/subscribe', {
+      if (subscription && forceRefresh) {
+        await subscription.unsubscribe().catch(() => {});
+        subscription = null;
+      }
+
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        });
+      }
+
+      const subRes = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subscription }),
       });
-    } catch (err) {
+
+      const subData = await subRes.json();
+      if (!subRes.ok) {
+        if (forceRefresh) {
+          alert('Failed to save push subscription: ' + (subData.error || 'Unknown error'));
+        }
+        return false;
+      }
+
+      return true;
+    } catch (err: any) {
       console.error('Background push setup error:', err);
+      if (forceRefresh) {
+        alert('Push setup error: ' + (err?.message || 'Check HTTPS & browser permissions'));
+      }
+      return false;
     }
   }
 
   async function handleEnableAlerts() {
     unlockAudio();
     playSingleAlertChime();
-    setAlertsActivated(true);
-    await registerBackgroundPush();
+    const ok = await registerBackgroundPush(true);
+    if (ok) {
+      setAlertsActivated(true);
+      const testRes = await fetch('/api/push/test', { method: 'POST' });
+      const testData = await testRes.json();
+      if (!testRes.ok || testData?.result?.sent === 0) {
+        alert('Push diagnostic: ' + JSON.stringify(testData));
+      }
+    }
   }
 
   function triggerIncomingAlertRing(newAlert: AlertItem) {
@@ -240,6 +283,9 @@ export default function CartoonDashboardPage() {
   }
 
   function handleStopRingOnly() {
+    if (ringingAlert && typeof window !== 'undefined') {
+      localStorage.setItem(`whopark_dismissed_${ringingAlert.id}`, '1');
+    }
     stopContinuousRing();
     setRingingAlert(null);
   }
@@ -305,12 +351,23 @@ export default function CartoonDashboardPage() {
 
         if (incomingAlerts.length > 0) {
           const newest = incomingAlerts[0];
+          const ageMs = Date.now() - new Date(newest.createdAt).getTime();
+          const isRecentUnreplied = ageMs < 5 * 60 * 1000 && !newest.ownerReply;
+          const alreadyDismissed =
+            typeof window !== 'undefined' &&
+            localStorage.getItem(`whopark_dismissed_${newest.id}`) === '1';
+
           if (isFirstLoadRef.current) {
             latestAlertIdRef.current = newest.id;
             isFirstLoadRef.current = false;
+            if (isRecentUnreplied && !alreadyDismissed) {
+              triggerIncomingAlertRing(newest);
+            }
           } else if (latestAlertIdRef.current !== newest.id) {
             latestAlertIdRef.current = newest.id;
-            triggerIncomingAlertRing(newest);
+            if (!alreadyDismissed) {
+              triggerIncomingAlertRing(newest);
+            }
           }
         } else {
           isFirstLoadRef.current = false;
@@ -330,7 +387,7 @@ export default function CartoonDashboardPage() {
       Notification.permission === 'granted'
     ) {
       setAlertsActivated(true);
-      registerBackgroundPush();
+      registerBackgroundPush(false);
     }
 
     loadDashboardData(false);
