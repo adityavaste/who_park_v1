@@ -35,3 +35,26 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 # who_park_v1
+
+
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCu5cjXESr_fZMIslICEPFf0U9qvKiYGyQ",
+  authDomain: "whopark-9e812.firebaseapp.com",
+  projectId: "whopark-9e812",
+  storageBucket: "whopark-9e812.firebasestorage.app",
+  messagingSenderId: "368085102522",
+  appId: "1:368085102522:web:1b7cb0b50897275412f783",
+  measurementId: "G-HDK998EHSY"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);

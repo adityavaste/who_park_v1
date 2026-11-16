@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid phone number or password.' }, { status: 401 });
     }
 
-    const token = await createToken(user.id, user.phone);
+    const token = await createToken({ userId: user.id, phone: user.phone });
     const response = NextResponse.json({ success: true });
     response.cookies.set('session_token', token, {
       httpOnly: true,

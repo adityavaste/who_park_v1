@@ -44,3 +44,13 @@ export const pushSubscriptions = pgTable('push_subscriptions', {
   auth: text('auth').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
+
+// db/schema.ts (add this table alongside your existing tables)
+export const callSessions = pgTable('call_sessions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tagId: uuid('tag_id').references(() => qrTags.id, { onDelete: 'cascade' }).notNull(),
+  status: varchar('status', { length: 20 }).default('RINGING').notNull(), // RINGING | CONNECTED | ENDED
+  offerSdp: text('offer_sdp').notNull(),
+  answerSdp: text('answer_sdp'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
