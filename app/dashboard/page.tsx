@@ -324,7 +324,12 @@ export default function CartoonDashboardPage() {
   }
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+    if (
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      Notification.permission === 'granted'
+    ) {
+      setAlertsActivated(true);
       registerBackgroundPush();
     }
 

@@ -8,32 +8,30 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-  if (!event.data) return;
-
-  let payload = {
-    title: '🚨 WHO PARK CAR ALERT!',
+  let data = {
+    title: '🚨 WHO PARK ALERT!',
     body: 'Someone scanned your vehicle QR sticker!',
     url: '/dashboard',
   };
 
   try {
-    payload = { ...payload, ...event.data.json() };
-  } catch {
-    payload.body = event.data.text();
-  }
+    if (event.data) {
+      data = { ...data, ...event.data.json() };
+    }
+  } catch {}
 
-  const options = {
-    body: payload.body,
-    icon: '/api/pwa-icon/192',
-    badge: '/api/pwa-icon/192',
-    vibrate: [400, 150, 400, 150, 600],
-    requireInteraction: true,
-    tag: 'whopark-alert',
-    renotify: true,
-    data: { url: payload.url || '/dashboard' },
-  };
-
-  event.waitUntil(self.registration.showNotification(payload.title, options));
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icon-192x192.png',
+      badge: '/icon-192x192.png',
+      vibrate: [400, 150, 400, 150, 600],
+      requireInteraction: true,
+      tag: 'whopark-urgent-alert',
+      renotify: true,
+      data: { url: data.url || '/dashboard' },
+    })
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {
@@ -41,15 +39,14 @@ self.addEventListener('notificationclick', (event) => {
   const targetUrl = event.notification.data?.url || '/dashboard';
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if ('focus' in client) {
-          client.navigate(targetUrl);
+        if (client.url.includes('/dashboard') && 'focus' in client) {
           return client.focus();
         }
       }
-      if (self.clients.openWindow) {
-        return self.clients.openWindow(targetUrl);
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
       }
     })
   );

@@ -3,3 +3,8 @@
 {"timestamp":"00:00:01.292","source":"Server","level":"LOG","message":"- Experiments (use with caution):"}
 {"timestamp":"00:00:01.293","source":"Server","level":"LOG","message":"  ✓ agentFeedback"}
 {"timestamp":"00:00:01.293","source":"Server","level":"LOG","message":""}
+{"timestamp":"00:04:45.635","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:30:21.333","source":"Server","level":"LOG","message":"  Reload env: .env.local"}
+{"timestamp":"00:30:22.656","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:30:35.342","source":"Server","level":"LOG","message":"  Reload env: .env.local"}
+{"timestamp":"00:30:35.986","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
