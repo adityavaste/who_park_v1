@@ -4,8 +4,9 @@ import { db } from '@/db';
 import { callSessions, qrTags, vehicles } from '@/db/schema';
 import { eq, and, gt, desc } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
+import { sendPushToOwner } from '@/lib/sendPush';
 
-// POST: Scanner initiates an anonymous WebRTC call (stores SDP Offer)
+// POST: Scanner initiates an anonymous WebRTC call (stores SDP Offer & sends background push)
 export async function POST(req: NextRequest) {
   try {
     const { slug, offerSdp } = await req.json();
@@ -14,28 +15,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Slug and offerSdp are required' }, { status: 400 });
     }
 
-    const [tag] = await db
-      .select()
+    const [record] = await db
+      .select({
+        tagId: qrTags.id,
+        isEnabled: qrTags.isEnabled,
+        plateNumber: vehicles.plateNumber,
+        ownerUserId: vehicles.userId,
+      })
       .from(qrTags)
+      .innerJoin(vehicles, eq(qrTags.vehicleId, vehicles.id))
       .where(eq(qrTags.publicSlug, slug))
       .limit(1);
 
-    if (!tag || !tag.isEnabled) {
-      return NextResponse.json({ error: 'Vehicle sticker is inactive or not found' }, { status: 404 });
+    if (!record || !record.isEnabled) {
+      return NextResponse.json(
+        { error: 'Vehicle sticker is inactive or not found' },
+        { status: 404 }
+      );
     }
 
-    // End any stale ringing calls older than 2 minutes for this tag
     const [createdCall] = await db
       .insert(callSessions)
       .values({
-        tagId: tag.id,
+        tagId: record.tagId,
         status: 'RINGING',
         offerSdp: JSON.stringify(offerSdp),
       })
       .returning({ id: callSessions.id });
 
+    // Wake up owner's phone via Background Web Push so they can tap & answer
+    await sendPushToOwner(record.ownerUserId, {
+      title: `📞 INCOMING ANONYMOUS CALL (${record.plateNumber})`,
+      body: 'Someone scanned your QR sticker and is calling you. Tap to answer now!',
+      url: '/dashboard',
+    });
+
     return NextResponse.json({ success: true, callId: createdCall.id });
   } catch (error: any) {
+    console.error('Start call error:', error);
     return NextResponse.json({ error: error.message || 'Failed to start call' }, { status: 500 });
   }
 }
