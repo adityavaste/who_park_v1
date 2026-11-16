@@ -1,5 +1,6 @@
 // src/app/api/owner/vehicles/route.ts
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { db } from '@/db';
 import { vehicles, qrTags, alertLogs, users } from '@/db/schema';
 import { eq, desc, inArray } from 'drizzle-orm';
@@ -37,6 +38,7 @@ export async function GET() {
           tagId: alertLogs.tagId,
           alertType: alertLogs.alertType,
           status: alertLogs.status,
+          ownerReply: alertLogs.ownerReply,
           createdAt: alertLogs.createdAt,
           plateNumber: vehicles.plateNumber,
         })
@@ -48,12 +50,28 @@ export async function GET() {
         .limit(20);
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: { phone: session.phone, fullName: user?.fullName || null },
       vehicles: userVehicles,
       alerts,
     });
+
+    // Sliding 400-day cookie renewal so active users never expire
+    const cookieStore = await cookies();
+    const existingToken = cookieStore.get('whopark_session')?.value;
+    if (existingToken) {
+      const FOUR_HUNDRED_DAYS = 400 * 24 * 60 * 60;
+      response.cookies.set('whopark_session', existingToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: FOUR_HUNDRED_DAYS,
+      });
+    }
+
+    return response;
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

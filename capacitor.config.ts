@@ -8,8 +8,12 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://whopark.in/dashboard',
     cleartext: false,
+    allowNavigation: ['whopark.in', '*.whopark.in', 'who-park-v1*.vercel.app'],
   },
   plugins: {
+    CapacitorCookies: {
+      enabled: true,
+    },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
     },
