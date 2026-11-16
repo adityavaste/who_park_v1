@@ -294,6 +294,26 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../../app/icon-192x192.png/route.tsx
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/icon-192x192.png">> = Specific
+  const handler = {} as typeof import("../../../app/icon-192x192.png/route.js")
+  type __Check = __IsExpected<typeof handler>
+  
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../app/icon-512x512.png/route.tsx
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/icon-512x512.png">> = Specific
+  const handler = {} as typeof import("../../../app/icon-512x512.png/route.js")
+  type __Check = __IsExpected<typeof handler>
+  
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 
 
 
