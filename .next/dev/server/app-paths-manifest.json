@@ -1,0 +1,13 @@
+{
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/auth/logout/route": "app/api/auth/logout/route.js",
+  "/api/auth/register/route": "app/api/auth/register/route.js",
+  "/api/owner/vehicles/route": "app/api/owner/vehicles/route.js",
+  "/api/pwa-icon/[size]/route": "app/api/pwa-icon/[size]/route.js",
+  "/api/qr/image/[slug]/route": "app/api/qr/image/[slug]/route.js",
+  "/api/vehicles/register/route": "app/api/vehicles/register/route.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/login/page": "app/login/page.js",
+  "/manifest.webmanifest/route": "app/manifest.webmanifest/route.js",
+  "/page": "app/page.js"
+}
