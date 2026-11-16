@@ -1,7 +1,8 @@
-// src/app/api/push/subscribe/route.ts
+// app/api/push/subscribe/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { pushSubscriptions } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
@@ -16,25 +17,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid push subscription' }, { status: 400 });
     }
 
+    // Remove any existing row for this device endpoint, then insert fresh
     await db
-      .insert(pushSubscriptions)
-      .values({
-        userId: session.userId,
-        endpoint: subscription.endpoint,
-        p256dh: subscription.keys.p256dh,
-        auth: subscription.keys.auth,
-      })
-      .onConflictDoUpdate({
-        target: pushSubscriptions.endpoint,
-        set: {
-          userId: session.userId,
-          p256dh: subscription.keys.p256dh,
-          auth: subscription.keys.auth,
-        },
-      });
+      .delete(pushSubscriptions)
+      .where(eq(pushSubscriptions.endpoint, subscription.endpoint));
+
+    await db.insert(pushSubscriptions).values({
+      userId: session.userId,
+      endpoint: subscription.endpoint,
+      p256dh: subscription.keys.p256dh,
+      auth: subscription.keys.auth,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error('[PUSH SUBSCRIBE ERROR]:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
