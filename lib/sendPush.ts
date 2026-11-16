@@ -16,8 +16,8 @@ export async function sendPushToOwner(
   payload: { title: string; body: string; url?: string }
 ) {
   if (!publicKey || !privateKey) {
-    console.warn('VAPID keys missing — background push skipped');
-    return;
+    console.error('[PUSH] Missing VAPID keys in environment variables');
+    return { sent: 0, reason: 'MISSING_VAPID_KEYS' };
   }
 
   const subs = await db
@@ -25,7 +25,12 @@ export async function sendPushToOwner(
     .from(pushSubscriptions)
     .where(eq(pushSubscriptions.userId, userId));
 
-  if (!subs.length) return;
+  if (!subs.length) {
+    console.warn(`[PUSH] No push subscriptions found in DB for user ${userId}`);
+    return { sent: 0, reason: 'NO_SUBSCRIPTIONS_IN_DB' };
+  }
+
+  let sentCount = 0;
 
   await Promise.all(
     subs.map(async (sub) => {
@@ -42,18 +47,24 @@ export async function sendPushToOwner(
             title: payload.title,
             body: payload.body,
             url: payload.url || '/dashboard',
-          })
+          }),
+          {
+            TTL: 60,
+            urgency: 'high',
+          }
         );
+        sentCount++;
       } catch (err: any) {
+        console.error('[PUSH] Delivery failed:', err?.statusCode, err?.body || err?.message);
         if (err?.statusCode === 404 || err?.statusCode === 410) {
           await db
             .delete(pushSubscriptions)
             .where(eq(pushSubscriptions.id, sub.id))
             .catch(() => {});
-        } else {
-          console.error('Web Push delivery error:', err?.message || err);
         }
       }
     })
   );
+
+  return { sent: sentCount, totalSubs: subs.length };
 }
