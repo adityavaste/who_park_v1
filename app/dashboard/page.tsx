@@ -1,10 +1,11 @@
-// src/app/dashboard/page.tsx
+// app/dashboard/page.tsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import QrScannerModal from '@/components/QrScannerModal';
+import { createReceiverConnection } from '@/lib/webrtcCall';
 import {
   unlockAudio,
   playSingleAlertChime,
@@ -31,6 +32,12 @@ interface AlertItem {
   plateNumber?: string;
 }
 
+interface IncomingCallItem {
+  id: string;
+  plateNumber: string;
+  offerSdp: string;
+}
+
 const QUICK_REPLIES = [
   '🏃 Coming in 2 mins!',
   '⏳ Wait, I am nearby',
@@ -45,8 +52,8 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export default function CartoonDashboardPage() {
-  const [appOrigin, setAppOrigin] = useState<string>('https://whopark.in');
   const router = useRouter();
+  const [appOrigin, setAppOrigin] = useState<string>('https://whopark.in');
   const [vehiclesList, setVehiclesList] = useState<VehicleItem[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +61,18 @@ export default function CartoonDashboardPage() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<{ phone: string; fullName: string | null } | null>(null);
 
-  // PWA Install states
+  // Anonymous WebRTC Call States & Refs
+  const [incomingCall, setIncomingCall] = useState<IncomingCallItem | null>(null);
+  const [ownerCallStatus, setOwnerCallStatus] = useState<'IDLE' | 'RINGING' | 'CONNECTED'>('IDLE');
+  const [ownerMuted, setOwnerMuted] = useState(false);
+
+  const ownerCallStatusRef = useRef<'IDLE' | 'RINGING' | 'CONNECTED'>('IDLE');
+  const incomingCallRef = useRef<IncomingCallItem | null>(null);
+  const ownerPcRef = useRef<RTCPeerConnection | null>(null);
+  const ownerStreamRef = useRef<MediaStream | null>(null);
+  const ownerAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // PWA Install States
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
 
@@ -70,16 +88,80 @@ export default function CartoonDashboardPage() {
   const [newEmergency, setNewEmergency] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  function updateCallState(
+    status: 'IDLE' | 'RINGING' | 'CONNECTED',
+    call: IncomingCallItem | null
+  ) {
+    ownerCallStatusRef.current = status;
+    incomingCallRef.current = call;
+    setOwnerCallStatus(status);
+    setIncomingCall(call);
+  }
+
+  function cleanupOwnerCall() {
+    stopContinuousRing();
+    if (ownerStreamRef.current) {
+      ownerStreamRef.current.getTracks().forEach((t) => t.stop());
+      ownerStreamRef.current = null;
+    }
+    if (ownerPcRef.current) {
+      ownerPcRef.current.close();
+      ownerPcRef.current = null;
+    }
+    updateCallState('IDLE', null);
+    setOwnerMuted(false);
+  }
+
+  async function handleAnswerIncomingCall() {
+    const activeCall = incomingCallRef.current;
+    if (!activeCall) return;
+    stopContinuousRing();
+    try {
+      const parsedOffer = JSON.parse(activeCall.offerSdp);
+      const { pc, localStream, answerSdp } = await createReceiverConnection(
+        parsedOffer,
+        (remoteStream) => {
+          if (ownerAudioRef.current) {
+            ownerAudioRef.current.srcObject = remoteStream;
+            ownerAudioRef.current.play().catch(() => {});
+          }
+        }
+      );
+
+      ownerPcRef.current = pc;
+      ownerStreamRef.current = localStream;
+
+      await fetch(`/api/calls/${activeCall.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'CONNECTED', answerSdp }),
+      });
+
+      updateCallState('CONNECTED', activeCall);
+    } catch (err: any) {
+      alert('Could not answer call: ' + (err?.message || 'Microphone error'));
+      cleanupOwnerCall();
+    }
+  }
+
+  async function handleRejectOrEndOwnerCall() {
+    const callId = incomingCallRef.current?.id;
+    cleanupOwnerCall();
+    if (callId) {
+      await fetch(`/api/calls/${callId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ENDED' }),
+      }).catch(() => {});
+    }
+  }
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setAppOrigin(window.location.origin);
-    }
-  }, []);
-  // Listen for PWA Install prompt
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstalled(true);
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        setIsInstalled(true);
+      }
     }
 
     const handleBeforeInstall = (e: Event) => {
@@ -110,12 +192,11 @@ export default function CartoonDashboardPage() {
       }
     } else {
       alert(
-        'To install WHO PARK as an app:\n\n• Android Chrome: Tap the 3-dot menu (⋮) at top-right → "Add to Home screen" or "Install app".\n• iPhone Safari: Tap the Share button (↑) at bottom → "Add to Home Screen".'
+        'To install WHO PARK as an app:\n\nAndroid Chrome: Tap the 3-dot menu (⋮) at top-right → "Add to Home screen" or "Install app".\n\niPhone Safari: Tap the Share button (↑) at bottom → "Add to Home Screen".'
       );
     }
   }
 
-  // Register Service Worker & Subscribe to Background Web Push
   async function registerBackgroundPush() {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
       return;
@@ -189,6 +270,24 @@ export default function CartoonDashboardPage() {
   async function loadDashboardData(silent = false) {
     if (!silent) setLoading(true);
     try {
+      // Check for incoming or ended anonymous WebRTC calls
+      if (ownerCallStatusRef.current === 'IDLE') {
+        const callRes = await fetch(`/api/calls?t=${Date.now()}`, { cache: 'no-store' });
+        const callData = await callRes.json().catch(() => ({}));
+        if (callData.success && callData.incomingCall) {
+          updateCallState('RINGING', callData.incomingCall);
+          startContinuousRing();
+        }
+      } else if (incomingCallRef.current) {
+        const statusRes = await fetch(`/api/calls/${incomingCallRef.current.id}?t=${Date.now()}`, {
+          cache: 'no-store',
+        });
+        const statusData = await statusRes.json().catch(() => ({}));
+        if (statusData.status === 'ENDED') {
+          cleanupOwnerCall();
+        }
+      }
+
       const res = await fetch(`/api/owner/vehicles?t=${Date.now()}`, {
         credentials: 'include',
         cache: 'no-store',
@@ -237,12 +336,12 @@ export default function CartoonDashboardPage() {
 
     return () => {
       clearInterval(pollTimer);
-      stopContinuousRing();
+      cleanupOwnerCall();
     };
   }, []);
 
   async function handleLogout() {
-    stopContinuousRing();
+    cleanupOwnerCall();
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/login');
   }
@@ -324,8 +423,9 @@ export default function CartoonDashboardPage() {
 
       {/* Background Push, Install App & Ringtone Banner */}
       <div
-        className={`mb-6 p-4 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${alertsActivated ? 'bg-emerald-200' : 'bg-yellow-300'
-          }`}
+        className={`mb-6 p-4 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+          alertsActivated ? 'bg-emerald-200' : 'bg-yellow-300'
+        }`}
       >
         <div className="flex items-center gap-3">
           <span className="text-2xl">{alertsActivated ? '🔔' : '📲'}</span>
@@ -693,6 +793,62 @@ export default function CartoonDashboardPage() {
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
       />
+
+      {/* Hidden Remote Audio Player for Anonymous Voice Calls */}
+      <audio ref={ownerAudioRef} autoPlay playsInline />
+
+      {/* Incoming / Connected Anonymous Voice Call Modal */}
+      {incomingCall && ownerCallStatus !== 'IDLE' && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-emerald-300 rounded-3xl max-w-sm w-full p-7 border-4 border-black shadow-[10px_10px_0px_#fff] text-center">
+            <div className="w-20 h-20 bg-white border-4 border-black rounded-full flex items-center justify-center text-4xl mx-auto shadow-[4px_4px_0px_#000] animate-pulse">
+              📞
+            </div>
+            <p className="text-xs font-black uppercase tracking-widest mt-4">
+              {ownerCallStatus === 'RINGING'
+                ? 'INCOMING ANONYMOUS CALL!'
+                : '● ANONYMOUS CALL CONNECTED'}
+            </p>
+            <h3 className="text-2xl font-black font-mono mt-1">{incomingCall.plateNumber}</h3>
+            <p className="text-xs font-bold text-black/80 mt-1">
+              Caller&apos;s phone number is hidden for privacy.
+            </p>
+
+            <div className="mt-6 flex items-center gap-3">
+              {ownerCallStatus === 'RINGING' ? (
+                <button
+                  type="button"
+                  onClick={handleAnswerIncomingCall}
+                  className="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs py-4 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000]"
+                >
+                  📞 ANSWER CALL
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!ownerStreamRef.current) return;
+                    const next = !ownerMuted;
+                    ownerStreamRef.current.getAudioTracks().forEach((t) => (t.enabled = !next));
+                    setOwnerMuted(next);
+                  }}
+                  className="flex-1 bg-white text-black font-black text-xs py-4 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000]"
+                >
+                  {ownerMuted ? '🔇 UNMUTE' : '🎙️ MUTE'}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleRejectOrEndOwnerCall}
+                className="flex-1 bg-rose-500 text-white font-black text-xs py-4 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000]"
+              >
+                📴 {ownerCallStatus === 'RINGING' ? 'DECLINE' : 'END CALL'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
