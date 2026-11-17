@@ -59,10 +59,6 @@ export async function sendPushToOwner(
 
           await getMessaging().send({
             token,
-            notification: {
-              title: payload.title,
-              body: payload.body,
-            },
             data: {
               title: payload.title,
               body: payload.body,
@@ -71,13 +67,6 @@ export async function sendPushToOwner(
             android: {
               priority: 'high',
               ttl: 3600 * 1000,
-              notification: {
-                channelId: 'whopark_urgent_v2',
-                priority: 'max',
-                defaultSound: true,
-                defaultVibrateTimings: true,
-                visibility: 'public',
-              },
             },
           });
           sentCount++;

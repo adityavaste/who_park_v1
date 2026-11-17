@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { alertLogs, qrTags, vehicles } from '@/db/schema';
 import { eq, and, gt, desc } from 'drizzle-orm';
 import { sendPushToOwner } from '@/lib/sendPush';
+import { purgeExpiredRecords } from '@/lib/cleanupDb';
 
 const ALERT_LABELS: Record<string, string> = {
   OBSTRUCTION: '🚗 Your car is blocking someone!',
@@ -111,7 +112,10 @@ export async function POST(req: NextRequest) {
       })
       .returning({ id: alertLogs.id });
 
-    // 5. Wake up owner's phone via Background Web Push even if app is closed
+    // Purge alert_logs > 24h and call_sessions > 1h in background
+    purgeExpiredRecords().catch((err) => console.error('[DB CLEANUP]', err));
+
+    // 5. Wake up owner's phone via Background Push even if app is closed
     const readableMessage = ALERT_LABELS[alertType] || `Vehicle Alert: ${alertType}`;
     await sendPushToOwner(record.ownerUserId, {
       title: `🚨 ${record.plateNumber} — WHO PARK ALERT`,
