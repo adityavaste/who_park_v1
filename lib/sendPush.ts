@@ -64,13 +64,15 @@ export async function sendPushToOwner(
               body: payload.body,
             },
             data: {
+              title: payload.title,
+              body: payload.body,
               url: payload.url || '/dashboard',
             },
             android: {
               priority: 'high',
               ttl: 3600 * 1000,
               notification: {
-                channelId: 'whopark_urgent',
+                channelId: 'whopark_urgent_v2',
                 priority: 'max',
                 defaultSound: true,
                 defaultVibrateTimings: true,
