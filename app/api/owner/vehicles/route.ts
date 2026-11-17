@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { db } from '@/db';
 import { vehicles, qrTags, alertLogs, users } from '@/db/schema';
-import { eq, desc, inArray } from 'drizzle-orm';
+import { eq, desc, inArray, and, gte } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
 
 export async function GET() {
@@ -32,6 +32,8 @@ export async function GET() {
     let alerts: any[] = [];
 
     if (tagIds.length > 0) {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
       alerts = await db
         .select({
           id: alertLogs.id,
@@ -45,7 +47,12 @@ export async function GET() {
         .from(alertLogs)
         .innerJoin(qrTags, eq(alertLogs.tagId, qrTags.id))
         .innerJoin(vehicles, eq(qrTags.vehicleId, vehicles.id))
-        .where(inArray(alertLogs.tagId, tagIds))
+        .where(
+          and(
+            inArray(alertLogs.tagId, tagIds),
+            gte(alertLogs.createdAt, twentyFourHoursAgo)
+          )
+        )
         .orderBy(desc(alertLogs.createdAt))
         .limit(20);
     }
@@ -57,7 +64,7 @@ export async function GET() {
       alerts,
     });
 
-    // Sliding 400-day cookie renewal so active users never expire
+    // Sliding 400-day cookie renewal
     const cookieStore = await cookies();
     const existingToken = cookieStore.get('whopark_session')?.value;
     if (existingToken) {

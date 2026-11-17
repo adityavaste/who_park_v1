@@ -8,15 +8,19 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.webkit.CookieManager;
+import android.webkit.PermissionRequest;
 import android.widget.Toast;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebChromeClient;
 import com.google.firebase.messaging.FirebaseMessaging;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends BridgeActivity {
     private static boolean hasSyncedThisSession = false;
@@ -26,22 +30,50 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         CookieManager.getInstance().setAcceptCookie(true);
 
+        requestAllRequiredPermissions();
+
+        // Allow WebView (QR Scanner & WebRTC Call) to access Camera and Microphone
+        if (this.bridge != null && this.bridge.getWebView() != null) {
+            this.bridge.getWebView().setWebChromeClient(new BridgeWebChromeClient(this.bridge) {
+                @Override
+                public void onPermissionRequest(final PermissionRequest request) {
+                    runOnUiThread(() -> request.grant(request.getResources()));
+                }
+            });
+        }
+    }
+
+    private void requestAllRequiredPermissions() {
+        List<String> needed = new ArrayList<>();
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            needed.add(Manifest.permission.CAMERA);
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            needed.add(Manifest.permission.RECORD_AUDIO);
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(
-                        this,
-                        new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                        1001
-                );
+                needed.add(Manifest.permission.POST_NOTIFICATIONS);
             }
+        }
+
+        if (!needed.isEmpty()) {
+            ActivityCompat.requestPermissions(
+                    this,
+                    needed.toArray(new String[0]),
+                    1001
+            );
         }
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        // Wait 2 seconds so WebView login cookies settle, then sync native FCM token
+        AlarmSoundHelper.stopAlarm();
         new Handler(Looper.getMainLooper()).postDelayed(this::syncNativeFcmTokenToServer, 2000);
     }
 
@@ -66,8 +98,6 @@ public class MainActivity extends BridgeActivity {
     private void syncNativeFcmTokenToServer() {
         FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
             if (!task.isSuccessful() || task.getResult() == null) {
-                String err = task.getException() != null ? task.getException().getMessage() : "Unknown";
-                showToast("FCM Token Error: " + err);
                 return;
             }
 
@@ -83,13 +113,10 @@ public class MainActivity extends BridgeActivity {
                     }
 
                     if (cookies == null || cookies.isEmpty()) {
-                        // User is on /login screen, not logged in yet
                         return;
                     }
 
-                    // Try primary domain first, follow redirect if 307/308
-                    String targetUrl = "https://whopark.in/api/push/subscribe";
-                    int code = postToken(targetUrl, cookies, fcmToken);
+                    int code = postToken("https://whopark.in/api/push/subscribe", cookies, fcmToken);
                     if (code == 307 || code == 308 || code == 301 || code == 302) {
                         code = postToken("https://www.whopark.in/api/push/subscribe", cookies, fcmToken);
                     }
@@ -97,11 +124,8 @@ public class MainActivity extends BridgeActivity {
                     if (code == 200 && !hasSyncedThisSession) {
                         hasSyncedThisSession = true;
                         showToast("✅ WHO PARK: Background Push Active!");
-                    } else if (code != 200) {
-                        showToast("⚠️ Push Sync HTTP " + code);
                     }
-                } catch (Exception e) {
-                    showToast("⚠️ Push Sync Error: " + e.getMessage());
+                } catch (Exception ignored) {
                 }
             }).start();
         });
