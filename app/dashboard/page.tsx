@@ -53,7 +53,7 @@ function urlBase64ToUint8Array(base64String: string) {
   return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
 }
 
-export default function CartoonDashboardPage() {
+export default function DashboardPage() {
   const router = useRouter();
   const [appOrigin, setAppOrigin] = useState<string>('https://whopark.in');
   const [vehiclesList, setVehiclesList] = useState<VehicleItem[]>([]);
@@ -368,7 +368,6 @@ export default function CartoonDashboardPage() {
   async function loadDashboardData(silent = false) {
     if (!silent) setLoading(true);
     try {
-      // Check for incoming or ended anonymous WebRTC calls
       if (ownerCallStatusRef.current === 'IDLE') {
         const callRes = await fetch(`/api/calls?t=${Date.now()}`, { cache: 'no-store' });
         const callData = await callRes.json().catch(() => ({}));
@@ -459,6 +458,9 @@ export default function CartoonDashboardPage() {
   async function handleLogout() {
     cleanupOwnerCall();
     await fetch('/api/auth/logout', { method: 'POST' });
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('whopark_token');
+    }
     router.push('/login');
   }
 
@@ -494,9 +496,10 @@ export default function CartoonDashboardPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#FFFDF0] flex items-center justify-center p-4">
-        <div className="bg-yellow-300 border-4 border-black p-6 rounded-3xl shadow-[6px_6px_0px_#000] font-black text-xl">
-          ⚡ LOADING GARAGE...
+      <main className="min-h-screen bg-[#FFFDF2] flex items-center justify-center p-4">
+        <div className="bg-white border-2 border-neutral-950 px-6 py-4 rounded-2xl shadow-[4px_4px_0px_#0a0a0a] flex items-center gap-3">
+          <span className="w-3 h-3 rounded-full bg-yellow-400 animate-ping" />
+          <span className="font-black text-base text-neutral-950">Loading Garage...</span>
         </div>
       </main>
     );
@@ -509,300 +512,327 @@ export default function CartoonDashboardPage() {
           setAlertsActivated(true);
         }
       }}
-      className="min-h-screen bg-[#FFFDF0] pt-6 pb-32 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto selection:bg-yellow-300"
+      className="min-h-screen bg-[#FFFDF2] text-neutral-950 pt-5 pb-32 px-4 sm:px-6 lg:px-8 selection:bg-yellow-300"
     >
-      {/* Top Navigation Bar */}
-      <nav className="flex items-center justify-between mb-6">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 bg-white hover:bg-yellow-100 text-black font-black text-xs px-4 py-2 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] transition"
-        >
-          🚕 WHO PARK HOME
-        </Link>
-
-        {userInfo ? (
-          <button
-            onClick={handleLogout}
-            className="bg-rose-400 hover:bg-rose-300 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-black font-black text-xs px-4 py-2 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] transition"
-          >
-            LOGOUT 🚪
-          </button>
-        ) : (
-          <Link
-            href="/login"
-            className="bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs px-4 py-2 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000]"
-          >
-            LOGIN 🔑
+      <div className="max-w-4xl mx-auto">
+        {/* Clean Top Header Bar */}
+        <nav className="flex items-center justify-between bg-white border-2 border-neutral-950 px-4 py-3 rounded-2xl shadow-[4px_4px_0px_#0a0a0a] mb-6">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-yellow-400 border-2 border-neutral-950 flex items-center justify-center font-black text-base">
+              W
+            </div>
+            <span className="font-black text-lg tracking-tight">
+              WHO<span className="text-yellow-500">PARK</span>
+            </span>
           </Link>
-        )}
-      </nav>
 
-      {/* Background Push, Install App & Ringtone Banner */}
-      <div
-        className={`mb-6 p-4 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
-          alertsActivated ? 'bg-emerald-200' : 'bg-yellow-300'
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">{alertsActivated ? '🔔' : '📲'}</span>
-          <div>
-            <p className="text-xs sm:text-sm font-black text-black uppercase">
-              {alertsActivated
-                ? 'Background Push & Ringtone Active!'
-                : 'Enable Background Alerts & Install App'}
-            </p>
-            <p className="text-[11px] font-bold text-stone-800">
-              {alertsActivated
-                ? 'You will receive alerts even when the app is closed.'
-                : 'Install the app & enable sound to get alerts even when your screen is off.'}
-            </p>
+          <div className="flex items-center gap-2">
+            {userInfo ? (
+              <button
+                onClick={handleLogout}
+                className="bg-white hover:bg-neutral-100 active:translate-y-0.5 text-neutral-950 font-bold text-xs px-3.5 py-2 rounded-xl border-2 border-neutral-950 shadow-[2px_2px_0px_#0a0a0a] transition"
+              >
+                Logout
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-bold text-xs px-4 py-2 rounded-xl border-2 border-neutral-950 shadow-[2px_2px_0px_#0a0a0a]"
+              >
+                Login
+              </Link>
+            )}
           </div>
-        </div>
+        </nav>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {!isInstalled && (
+        {/* Compact Alert & App Status Strip */}
+        <div
+          className={`mb-6 px-4 py-3.5 rounded-2xl border-2 border-neutral-950 shadow-[4px_4px_0px_#0a0a0a] flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+            alertsActivated ? 'bg-white' : 'bg-yellow-300'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span
+              className={`w-9 h-9 rounded-xl border-2 border-neutral-950 flex items-center justify-center text-lg shrink-0 ${
+                alertsActivated ? 'bg-yellow-400' : 'bg-white'
+              }`}
+            >
+              {alertsActivated ? '🔔' : '📲'}
+            </span>
+            <div>
+              <p className="text-xs sm:text-sm font-black text-neutral-950">
+                {alertsActivated
+                  ? 'Instant Ring & Push Alerts Active'
+                  : 'Turn On Background Ring & Push Alerts'}
+              </p>
+              <p className="text-xs text-neutral-600 font-medium">
+                {alertsActivated
+                  ? 'Your phone will ring even when the app is closed.'
+                  : 'Enable notifications so you never miss a vehicle alert.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {!isInstalled && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleInstallApp();
+                }}
+                className="bg-neutral-950 hover:bg-neutral-800 text-yellow-400 font-bold text-xs px-3.5 py-2 rounded-xl transition"
+              >
+                Install App
+              </button>
+            )}
+
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                handleInstallApp();
+                handleEnableAlerts();
               }}
-              className="bg-black hover:bg-stone-800 active:translate-y-0.5 text-yellow-400 font-black text-xs px-4 py-2.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#fff] whitespace-nowrap transition"
+              className="bg-yellow-400 hover:bg-yellow-300 active:translate-y-0.5 text-neutral-950 font-bold text-xs px-3.5 py-2 rounded-xl border-2 border-neutral-950 shadow-[2px_2px_0px_#0a0a0a] transition"
             >
-              📲 INSTALL APP
+              {alertsActivated ? 'Test Ring' : 'Enable Alerts'}
             </button>
-          )}
+          </div>
+        </div>
+
+        {/* Driver Profile & Quick Stats Card */}
+        <header className="bg-white border-2 border-neutral-950 p-5 sm:p-6 rounded-3xl shadow-[6px_6px_0px_#0a0a0a] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="bg-yellow-400 border border-neutral-950 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+                Owner Garage
+              </span>
+              <span className="text-xs font-mono font-bold text-neutral-500">
+                {userInfo?.phone}
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-neutral-950">
+              {userInfo?.fullName ? `${userInfo.fullName}'s Vehicles` : 'My Vehicles'}
+            </h1>
+            <p className="text-xs text-neutral-500 font-medium mt-1">
+              {vehiclesList.length} {vehiclesList.length === 1 ? 'vehicle' : 'vehicles'} active •{' '}
+              {alerts.length} {alerts.length === 1 ? 'alert' : 'alerts'} in last 24h
+            </p>
+          </div>
 
           <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEnableAlerts();
-            }}
-            className="bg-white hover:bg-yellow-50 active:translate-y-0.5 text-black font-black text-xs px-4 py-2.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] whitespace-nowrap transition"
+            onClick={() => setShowAddModal(true)}
+            className="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-300 active:translate-y-0.5 text-neutral-950 font-black text-sm px-5 py-3 rounded-2xl border-2 border-neutral-950 shadow-[4px_4px_0px_#0a0a0a] transition"
           >
-            {alertsActivated ? '🔊 TEST RING' : '🔔 ENABLE ALERTS'}
+            + Add Vehicle
           </button>
-        </div>
-      </div>
+        </header>
 
-      {/* Dashboard Header Box */}
-      <header className="bg-white border-4 border-black p-6 rounded-3xl shadow-[8px_8px_0px_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <div className="inline-block bg-yellow-400 text-black border-2 border-black text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2">
-            Garage Headquarters
-          </div>
-          <h1 className="text-3xl font-black text-black tracking-tight">
-            {userInfo?.fullName ? `${userInfo.fullName.toUpperCase()}'S GARAGE` : 'MY CAR FLEET'}
-          </h1>
-          <p className="text-xs font-bold text-stone-600 mt-1">
-            Driver ID:{' '}
-            <span className="font-mono font-black bg-yellow-100 px-2 py-0.5 rounded border border-black text-black">
-              {userInfo?.phone}
+        {/* Vehicles & QR Stickers */}
+        <section className="mt-9">
+          <div className="flex items-center justify-between mb-3.5">
+            <h2 className="text-lg font-black text-neutral-950">My QR Stickers</h2>
+            <span className="text-xs font-bold text-neutral-500">
+              Tap Print for windshield card
             </span>
-          </p>
-        </div>
-
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-300 active:translate-x-1 active:translate-y-1 active:shadow-none text-black font-black text-sm px-6 py-3.5 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition-all"
-        >
-          + ADD NEW CAR 🚗
-        </button>
-      </header>
-
-      {/* Vehicles & QR Stickers */}
-      <section className="mt-10">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-2xl">🏷️</span>
-          <h2 className="text-xl font-black text-black">MY QR STICKERS</h2>
-        </div>
-
-        {vehiclesList.length === 0 ? (
-          <div className="bg-white border-4 border-dashed border-black rounded-3xl p-10 text-center shadow-[6px_6px_0px_#000]">
-            <div className="text-6xl mb-3">📦</div>
-            <p className="text-lg font-black text-black">NO CARS IN YOUR GARAGE!</p>
-            <p className="text-stone-500 font-bold text-xs mt-1">
-              Add a vehicle to generate your custom cartoon QR sticker.
-            </p>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="mt-4 inline-block bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs px-5 py-3 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000]"
-            >
-              REGISTER FIRST CAR ➔
-            </button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {vehiclesList.map((veh) => (
-              <div
-                key={veh.id}
-                className="bg-white rounded-3xl border-4 border-black shadow-[8px_8px_0px_#000] p-6 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="bg-yellow-300 text-black text-xs font-black px-3 py-1 rounded-full border-2 border-black uppercase">
-                      ● ACTIVE
-                    </span>
-                    <span className="font-mono text-xs font-black text-stone-600 bg-stone-100 px-2.5 py-0.5 rounded border-2 border-black">
-                      /{veh.tagSlug}
-                    </span>
-                  </div>
 
-                  <h3 className="text-2xl font-black text-black tracking-wide font-mono">
-                    {veh.plateNumber}
-                  </h3>
-                  <p className="text-xs font-black text-stone-600 uppercase mt-0.5">
-                    🚘 {veh.makeModel || 'Vehicle'}
-                  </p>
-
-                  <div className="mt-5 bg-yellow-100 border-3 border-black p-4 rounded-2xl flex items-center gap-4 shadow-[4px_4px_0px_#000]">
-                    <div className="bg-white p-2 rounded-xl border-2 border-black flex-shrink-0">
-                      <img
-                        src={`/api/qr/image/${veh.tagSlug}?origin=${encodeURIComponent(appOrigin)}`}
-                        alt="QR Code"
-                        className="w-20 h-20 object-contain"
-                      />
-                    </div>
-                    <div className="text-xs">
-                      <p className="font-black text-black text-sm uppercase">Scan to Alert</p>
-                      <p className="font-bold text-stone-700 mt-1 leading-snug">
-                        Stick on windshield. Anyone can ping you privately!
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex items-center gap-3">
-                  <Link
-                    href={`/dashboard/sticker/${veh.tagSlug}`}
-                    className="flex-1 text-center bg-yellow-400 hover:bg-yellow-300 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-black font-black text-xs py-3.5 px-3 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000] transition"
-                  >
-                    🖨️ PRINT STICKER CARD
-                  </Link>
-                  <a
-                    href={`/api/qr/image/${veh.tagSlug}?origin=${encodeURIComponent(appOrigin)}`}
-                    download={`${veh.plateNumber}-QR.png`}
-                    className="bg-white hover:bg-stone-50 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-black font-black text-xs py-3.5 px-3.5 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000] transition"
-                    title="Download Raw QR PNG"
-                  >
-                    💾 PNG
-                  </a>
-                </div>
+          {vehiclesList.length === 0 ? (
+            <div className="bg-white border-2 border-dashed border-neutral-950 rounded-3xl p-9 text-center shadow-[4px_4px_0px_#0a0a0a]">
+              <div className="w-12 h-12 rounded-2xl bg-yellow-300 border-2 border-neutral-950 flex items-center justify-center text-2xl mx-auto mb-3">
+                🚘
               </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Alert Logs */}
-      <section className="mt-12">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">⚡</span>
-            <h2 className="text-xl font-black text-black">MY ALERTS & HONKS LOG</h2>
-          </div>
-          <span className="text-[11px] font-black text-emerald-700 bg-emerald-100 border-2 border-black px-2.5 py-0.5 rounded-full">
-            ● LIVE
-          </span>
-        </div>
-
-        <div className="bg-white rounded-3xl border-4 border-black shadow-[8px_8px_0px_#000] overflow-hidden">
-          {alerts.length === 0 ? (
-            <div className="p-8 text-center font-bold text-stone-500 text-sm">
-              No alerts yet! Your cars are parked peacefully. 😴
+              <p className="text-base font-black text-neutral-950">No vehicles registered yet</p>
+              <p className="text-neutral-500 font-medium text-xs mt-1 max-w-xs mx-auto">
+                Add your car or bike plate number to generate your private windshield QR sticker.
+              </p>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="mt-4 inline-block bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-bold text-xs px-5 py-2.5 rounded-xl border-2 border-neutral-950 shadow-[3px_3px_0px_#0a0a0a]"
+              >
+                + Register First Vehicle
+              </button>
             </div>
           ) : (
-            <div className="divide-y-3 divide-black">
-              {alerts.map((al) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {vehiclesList.map((veh) => (
                 <div
-                  key={al.id}
-                  className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-yellow-50 transition"
+                  key={veh.id}
+                  className="bg-white rounded-3xl border-2 border-neutral-950 shadow-[6px_6px_0px_#0a0a0a] p-5 flex flex-col justify-between"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">
-                      {al.alertType === 'OBSTRUCTION' && '🚗'}
-                      {al.alertType === 'HEADLIGHTS' && '💡'}
-                      {al.alertType === 'EMERGENCY' && '🚨'}
-                    </span>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {al.plateNumber && (
-                          <span className="font-mono text-xs font-black bg-yellow-300 px-2 py-0.5 rounded border border-black text-black">
-                            {al.plateNumber}
-                          </span>
-                        )}
-                        <p className="font-black text-black text-sm">
-                          {al.alertType === 'OBSTRUCTION' && 'CAR BLOCKING PATH!'}
-                          {al.alertType === 'HEADLIGHTS' && 'LIGHTS OR WINDOW OPEN'}
-                          {al.alertType === 'EMERGENCY' && 'EMERGENCY / TOW ALERT!'}
-                          {!['OBSTRUCTION', 'HEADLIGHTS', 'EMERGENCY'].includes(al.alertType) && al.alertType}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="inline-flex items-center gap-1.5 bg-yellow-300 text-neutral-950 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-neutral-950">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                        Active Sticker
+                      </span>
+                      <span className="font-mono text-xs font-bold text-neutral-500">
+                        /{veh.tagSlug}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4 bg-[#FFFDF2] border-2 border-neutral-950 p-3.5 rounded-2xl">
+                      <div>
+                        <h3 className="text-xl sm:text-2xl font-black text-neutral-950 tracking-wider font-mono">
+                          {veh.plateNumber}
+                        </h3>
+                        <p className="text-xs font-semibold text-neutral-600 mt-0.5">
+                          {veh.makeModel || 'Registered Vehicle'}
+                        </p>
+                        <p className="text-[11px] text-neutral-500 mt-2">
+                          Scan to alert owner privately
                         </p>
                       </div>
-                      {al.ownerReply && (
-                        <p className="text-xs font-black text-emerald-700 mt-1">
-                          ↪ Your Reply: &ldquo;{al.ownerReply}&rdquo;
-                        </p>
-                      )}
-                      <p className="text-xs font-bold text-stone-500 font-mono mt-0.5">
-                        {new Date(al.createdAt).toLocaleString('en-IN', {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                        })}
-                      </p>
+
+                      <div className="bg-white p-2 rounded-xl border-2 border-neutral-950 shrink-0 shadow-[2px_2px_0px_#0a0a0a]">
+                        <img
+                          src={`/api/qr/image/${veh.tagSlug}?origin=${encodeURIComponent(appOrigin)}`}
+                          alt={`QR Code for ${veh.plateNumber}`}
+                          className="w-20 h-20 object-contain"
+                        />
+                      </div>
                     </div>
                   </div>
-                  <span className="inline-block self-start sm:self-auto bg-yellow-300 text-black text-xs font-black px-3 py-1 rounded-full border-2 border-black">
-                    {al.status}
-                  </span>
+
+                  <div className="mt-4 flex items-center gap-2.5">
+                    <Link
+                      href={`/dashboard/sticker/${veh.tagSlug}`}
+                      className="flex-1 text-center bg-yellow-400 hover:bg-yellow-300 active:translate-y-0.5 text-neutral-950 font-bold text-xs py-3 px-3 rounded-xl border-2 border-neutral-950 shadow-[3px_3px_0px_#0a0a0a] transition"
+                    >
+                      Print Sticker Card
+                    </Link>
+                    <a
+                      href={`/api/qr/image/${veh.tagSlug}?origin=${encodeURIComponent(appOrigin)}`}
+                      download={`${veh.plateNumber}-QR.png`}
+                      className="bg-white hover:bg-neutral-50 active:translate-y-0.5 text-neutral-950 font-bold text-xs py-3 px-3.5 rounded-xl border-2 border-neutral-950 shadow-[3px_3px_0px_#0a0a0a] transition"
+                      title="Download Raw QR PNG"
+                    >
+                      PNG
+                    </a>
+                  </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
-      </section>
+        </section>
 
-      {/* PhonePe / GPay Style Floating Bottom Scan Button */}
+        {/* Recent Alerts (Last 24 Hours) */}
+        <section className="mt-10">
+          <div className="flex items-center justify-between mb-3.5">
+            <div>
+              <h2 className="text-lg font-black text-neutral-950">Recent Alerts</h2>
+              <p className="text-xs text-neutral-500 font-medium">
+                Showing alerts from the last 24 hours
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-neutral-950 bg-yellow-300 border border-neutral-950 px-2.5 py-0.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+              Live
+            </span>
+          </div>
+
+          <div className="bg-white rounded-3xl border-2 border-neutral-950 shadow-[6px_6px_0px_#0a0a0a] overflow-hidden">
+            {alerts.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="font-bold text-neutral-700 text-sm">No alerts in the last 24 hours</p>
+                <p className="text-xs text-neutral-500 mt-1">
+                  Your vehicles are parked peacefully.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y-2 divide-neutral-200">
+                {alerts.map((al) => (
+                  <div
+                    key={al.id}
+                    className="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-yellow-50/60 transition"
+                  >
+                    <div className="flex items-start sm:items-center gap-3">
+                      <span className="w-10 h-10 rounded-xl bg-yellow-100 border border-neutral-950 flex items-center justify-center text-xl shrink-0">
+                        {al.alertType === 'OBSTRUCTION' && '🚗'}
+                        {al.alertType === 'HEADLIGHTS' && '💡'}
+                        {al.alertType === 'EMERGENCY' && '🚨'}
+                        {!['OBSTRUCTION', 'HEADLIGHTS', 'EMERGENCY'].includes(al.alertType) && '🔔'}
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {al.plateNumber && (
+                            <span className="font-mono text-xs font-black bg-yellow-400 px-2 py-0.5 rounded border border-neutral-950 text-neutral-950">
+                              {al.plateNumber}
+                            </span>
+                          )}
+                          <p className="font-bold text-neutral-950 text-sm">
+                            {al.alertType === 'OBSTRUCTION' && 'Car blocking path'}
+                            {al.alertType === 'HEADLIGHTS' && 'Headlights or window open'}
+                            {al.alertType === 'EMERGENCY' && 'Urgent tow / emergency'}
+                            {!['OBSTRUCTION', 'HEADLIGHTS', 'EMERGENCY'].includes(al.alertType) &&
+                              al.alertType}
+                          </p>
+                        </div>
+                        {al.ownerReply && (
+                          <p className="text-xs font-bold text-emerald-700 mt-1">
+                            Replied: &ldquo;{al.ownerReply}&rdquo;
+                          </p>
+                        )}
+                        <p className="text-[11px] font-medium text-neutral-500 mt-0.5">
+                          {new Date(al.createdAt).toLocaleString('en-IN', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          })}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span className="inline-block self-start sm:self-auto bg-neutral-100 text-neutral-800 text-[11px] font-bold px-2.5 py-1 rounded-full border border-neutral-300">
+                      {al.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {/* Floating Bottom Scan Button */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
         <button
           onClick={() => setIsScannerOpen(true)}
-          className="bg-yellow-400 hover:bg-yellow-300 active:translate-y-1 active:shadow-none text-black font-black text-sm sm:text-base px-7 py-4 rounded-full border-4 border-black shadow-[0_8px_0px_#000] flex items-center gap-3 transition-all whitespace-nowrap"
+          className="bg-yellow-400 hover:bg-yellow-300 active:translate-y-0.5 text-neutral-950 font-black text-sm px-6 py-3.5 rounded-full border-2 border-neutral-950 shadow-[0_6px_0px_#0a0a0a] flex items-center gap-2.5 transition whitespace-nowrap"
         >
-          <span className="bg-black text-yellow-400 w-9 h-9 rounded-full flex items-center justify-center text-lg">
-            📸
+          <span className="bg-neutral-950 text-yellow-400 w-8 h-8 rounded-full flex items-center justify-center text-base">
+            📷
           </span>
-          <span>SCAN ANY CAR QR</span>
+          <span>Scan Car QR</span>
         </button>
       </div>
 
-      {/* STEADY (NON-BOUNCING) INCOMING ALERT POPUP WITH QUICK REPLIES */}
+      {/* Incoming Alert Ring Modal with Quick Replies */}
       {ringingAlert && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-yellow-400 rounded-3xl max-w-sm w-full p-6 sm:p-7 border-4 border-black shadow-[10px_10px_0px_#fff] text-center">
-            <div className="w-16 h-16 bg-white border-4 border-black rounded-full flex items-center justify-center text-3xl mx-auto shadow-[4px_4px_0px_#000] animate-pulse">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 border-2 border-neutral-950 shadow-[8px_8px_0px_#facc15] text-center">
+            <div className="w-14 h-14 bg-yellow-400 border-2 border-neutral-950 rounded-2xl flex items-center justify-center text-3xl mx-auto animate-pulse">
               🚨
             </div>
 
-            <div className="inline-block bg-black text-yellow-400 text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-widest mt-3">
-              INCOMING VEHICLE PING!
-            </div>
+            <span className="inline-block bg-neutral-950 text-yellow-400 text-[11px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider mt-3">
+              Incoming Vehicle Alert
+            </span>
 
             {ringingAlert.plateNumber && (
-              <div className="mt-2.5 bg-white border-3 border-black rounded-2xl py-2 px-4 font-mono font-black text-2xl text-black tracking-widest">
+              <div className="mt-2.5 bg-[#FFFDF2] border-2 border-neutral-950 rounded-xl py-1.5 px-4 font-mono font-black text-xl text-neutral-950 tracking-widest">
                 {ringingAlert.plateNumber}
               </div>
             )}
 
-            <h3 className="text-lg font-black text-black mt-3 uppercase leading-snug">
-              {ringingAlert.alertType === 'OBSTRUCTION' && '🚗 YOUR CAR IS BLOCKING SOMEONE!'}
-              {ringingAlert.alertType === 'HEADLIGHTS' && '💡 HEADLIGHTS OR WINDOW OPEN!'}
-              {ringingAlert.alertType === 'EMERGENCY' && '🚨 URGENT TOW / EMERGENCY!'}
+            <h3 className="text-base font-black text-neutral-950 mt-3">
+              {ringingAlert.alertType === 'OBSTRUCTION' && 'Your car is blocking someone!'}
+              {ringingAlert.alertType === 'HEADLIGHTS' && 'Headlights or window left open!'}
+              {ringingAlert.alertType === 'EMERGENCY' && 'Urgent tow / emergency alert!'}
             </h3>
 
-            {/* Quick Reply Buttons to Send Directly to Scanner */}
-            <div className="mt-5 text-left">
-              <p className="text-[11px] font-black text-black uppercase tracking-wider mb-2 text-center">
-                Tap a Quick Reply to Send & Stop Ring:
+            <div className="mt-4 text-left">
+              <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-2 text-center">
+                Tap a quick reply to respond & stop ring
               </p>
               <div className="space-y-2">
                 {QUICK_REPLIES.map((reply) => (
@@ -810,21 +840,20 @@ export default function CartoonDashboardPage() {
                     key={reply}
                     disabled={sendingReply}
                     onClick={() => handleQuickReply(reply)}
-                    className="w-full bg-white hover:bg-yellow-100 active:translate-y-0.5 text-black font-black text-xs sm:text-sm py-3 px-4 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000] transition flex items-center justify-between"
+                    className="w-full bg-yellow-400 hover:bg-yellow-300 active:translate-y-0.5 text-neutral-950 font-bold text-xs sm:text-sm py-2.5 px-4 rounded-xl border-2 border-neutral-950 shadow-[2px_2px_0px_#0a0a0a] transition flex items-center justify-between"
                   >
                     <span>{reply}</span>
-                    <span>➔</span>
+                    <span>→</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Dismiss / Stop Ring Button */}
             <button
               onClick={handleStopRingOnly}
-              className="mt-4 w-full bg-rose-500 hover:bg-rose-400 active:translate-y-0.5 text-white font-black text-xs py-3.5 px-5 rounded-2xl border-3 border-black shadow-[4px_4px_0px_#000] transition"
+              className="mt-4 w-full bg-white hover:bg-neutral-100 text-neutral-700 font-bold text-xs py-2.5 px-4 rounded-xl border-2 border-neutral-300 transition"
             >
-              🔕 STOP RING ONLY
+              Stop Ring Only
             </button>
           </div>
         </div>
@@ -833,18 +862,20 @@ export default function CartoonDashboardPage() {
       {/* Add Vehicle Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-[#FFFDF0] rounded-3xl max-w-md w-full p-6 sm:p-8 border-4 border-black shadow-[10px_10px_0px_#000]">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-2xl font-black text-black">REGISTER CAR</h3>
-              <span className="text-3xl">🚘</span>
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 border-2 border-neutral-950 shadow-[8px_8px_0px_#0a0a0a]">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xl font-black text-neutral-950">Add Vehicle</h3>
+              <span className="w-9 h-9 rounded-xl bg-yellow-400 border-2 border-neutral-950 flex items-center justify-center text-lg">
+                🚘
+              </span>
             </div>
-            <p className="text-xs font-bold text-stone-600 mb-6">
-              We will stamp a unique private QR code for your windshield.
+            <p className="text-xs text-neutral-500 font-medium mb-5">
+              Generate a unique private QR sticker for your windshield.
             </p>
 
             <form onSubmit={handleAddVehicle} className="space-y-4">
               <div>
-                <label className="block text-xs font-black text-black uppercase mb-1">
+                <label className="block text-xs font-bold text-neutral-700 mb-1">
                   License Plate *
                 </label>
                 <input
@@ -852,51 +883,51 @@ export default function CartoonDashboardPage() {
                   required
                   placeholder="MH 12 AB 1234"
                   value={newPlate}
-                  onChange={(e) => setNewPlate(e.target.value)}
-                  className="w-full bg-white text-black placeholder:text-stone-400 border-3 border-black rounded-2xl px-4 py-3 text-sm font-black font-mono shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
+                  onChange={(e) => setNewPlate(e.target.value.toUpperCase())}
+                  className="w-full bg-white text-neutral-950 placeholder:text-neutral-400 border-2 border-neutral-950 rounded-xl px-3.5 py-2.5 text-sm font-black font-mono focus:outline-none focus:bg-yellow-50"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black text-black uppercase mb-1">
+                <label className="block text-xs font-bold text-neutral-700 mb-1">
                   Make & Model
                 </label>
                 <input
                   type="text"
-                  placeholder="Tata Zest, Hyundai Creta"
+                  placeholder="e.g. Tata Zest, Hyundai Creta"
                   value={newModel}
                   onChange={(e) => setNewModel(e.target.value)}
-                  className="w-full bg-white text-black placeholder:text-stone-400 border-3 border-black rounded-2xl px-4 py-3 text-sm font-bold shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
+                  className="w-full bg-white text-neutral-950 placeholder:text-neutral-400 border-2 border-neutral-300 focus:border-neutral-950 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black text-black uppercase mb-1">
-                  Emergency Contact
+                <label className="block text-xs font-bold text-neutral-700 mb-1">
+                  Emergency Contact (Optional)
                 </label>
                 <input
                   type="tel"
                   placeholder="+91 98765 00000"
                   value={newEmergency}
                   onChange={(e) => setNewEmergency(e.target.value)}
-                  className="w-full bg-white text-black placeholder:text-stone-400 border-3 border-black rounded-2xl px-4 py-3 text-sm font-bold shadow-[3px_3px_0px_#000] focus:outline-none focus:bg-yellow-50"
+                  className="w-full bg-white text-neutral-950 placeholder:text-neutral-400 border-2 border-neutral-300 focus:border-neutral-950 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none"
                 />
               </div>
 
-              <div className="pt-4 flex items-center gap-3">
+              <div className="pt-3 flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 bg-white hover:bg-stone-100 text-black font-black py-3 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000] text-sm transition"
+                  className="flex-1 bg-white hover:bg-neutral-100 text-neutral-950 font-bold py-3 rounded-xl border-2 border-neutral-950 text-sm transition"
                 >
-                  CANCEL
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black font-black py-3 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000] text-sm transition disabled:opacity-50"
+                  className="flex-1 bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-black py-3 rounded-xl border-2 border-neutral-950 shadow-[3px_3px_0px_#0a0a0a] text-sm transition disabled:opacity-50"
                 >
-                  {isSubmitting ? 'STAMPING...' : 'CREATE QR 🚀'}
+                  {isSubmitting ? 'Creating...' : 'Create QR Sticker'}
                 </button>
               </div>
             </form>
@@ -904,7 +935,7 @@ export default function CartoonDashboardPage() {
         </div>
       )}
 
-      {/* Fullscreen PhonePe / GPay Style QR Scanner */}
+      {/* Fullscreen QR Scanner */}
       <QrScannerModal
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
@@ -915,29 +946,31 @@ export default function CartoonDashboardPage() {
 
       {/* Incoming / Connected Anonymous Voice Call Modal */}
       {incomingCall && ownerCallStatus !== 'IDLE' && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-emerald-300 rounded-3xl max-w-sm w-full p-7 border-4 border-black shadow-[10px_10px_0px_#fff] text-center">
-            <div className="w-20 h-20 bg-white border-4 border-black rounded-full flex items-center justify-center text-4xl mx-auto shadow-[4px_4px_0px_#000] animate-pulse">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 border-2 border-neutral-950 shadow-[8px_8px_0px_#facc15] text-center">
+            <div className="w-16 h-16 bg-yellow-400 border-2 border-neutral-950 rounded-full flex items-center justify-center text-3xl mx-auto animate-pulse">
               📞
             </div>
-            <p className="text-xs font-black uppercase tracking-widest mt-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 mt-3">
               {ownerCallStatus === 'RINGING'
-                ? 'INCOMING ANONYMOUS CALL!'
-                : '● ANONYMOUS CALL CONNECTED'}
+                ? 'Incoming Private Call'
+                : '● Private Call Connected'}
             </p>
-            <h3 className="text-2xl font-black font-mono mt-1">{incomingCall.plateNumber}</h3>
-            <p className="text-xs font-bold text-black/80 mt-1">
+            <h3 className="text-2xl font-black font-mono mt-1 text-neutral-950">
+              {incomingCall.plateNumber}
+            </h3>
+            <p className="text-xs font-medium text-neutral-500 mt-1">
               Caller&apos;s phone number is hidden for privacy.
             </p>
 
-            <div className="mt-6 flex items-center gap-3">
+            <div className="mt-5 flex items-center gap-3">
               {ownerCallStatus === 'RINGING' ? (
                 <button
                   type="button"
                   onClick={handleAnswerIncomingCall}
-                  className="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs py-4 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000]"
+                  className="flex-1 bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-black text-xs py-3.5 rounded-xl border-2 border-neutral-950 shadow-[3px_3px_0px_#0a0a0a]"
                 >
-                  📞 ANSWER CALL
+                  Answer Call
                 </button>
               ) : (
                 <button
@@ -948,18 +981,18 @@ export default function CartoonDashboardPage() {
                     ownerStreamRef.current.getAudioTracks().forEach((t) => (t.enabled = !next));
                     setOwnerMuted(next);
                   }}
-                  className="flex-1 bg-white text-black font-black text-xs py-4 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000]"
+                  className="flex-1 bg-white text-neutral-950 font-bold text-xs py-3.5 rounded-xl border-2 border-neutral-950 shadow-[3px_3px_0px_#0a0a0a]"
                 >
-                  {ownerMuted ? '🔇 UNMUTE' : '🎙️ MUTE'}
+                  {ownerMuted ? 'Unmute' : 'Mute'}
                 </button>
               )}
 
               <button
                 type="button"
                 onClick={handleRejectOrEndOwnerCall}
-                className="flex-1 bg-rose-500 text-white font-black text-xs py-4 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000]"
+                className="flex-1 bg-neutral-950 text-white font-bold text-xs py-3.5 rounded-xl"
               >
-                📴 {ownerCallStatus === 'RINGING' ? 'DECLINE' : 'END CALL'}
+                {ownerCallStatus === 'RINGING' ? 'Decline' : 'End Call'}
               </button>
             </div>
           </div>

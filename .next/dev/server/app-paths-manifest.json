@@ -5,6 +5,7 @@
   "/api/qr/image/[slug]/route": "app/api/qr/image/[slug]/route.js",
   "/api/vehicles/register/route": "app/api/vehicles/register/route.js",
   "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/sticker/[slug]/page": "app/dashboard/sticker/[slug]/page.js",
   "/icon-192x192.png/route": "app/icon-192x192.png/route.js",
   "/login/page": "app/login/page.js",
   "/manifest.webmanifest/route": "app/manifest.webmanifest/route.js",
