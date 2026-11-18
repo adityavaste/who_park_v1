@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   appName: 'WHO PARK',
   webDir: 'public',
   server: {
-    url: 'https://www.whopark.in/login',
+    url: 'https://www.whopark.in',
     cleartext: false,
     allowNavigation: [
       'www.whopark.in',
