@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebChromeClient;
 import com.google.firebase.messaging.FirebaseMessaging;
+import io.capawesome.capacitorjs.plugins.firebase.authentication.FirebaseAuthenticationPlugin;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -27,6 +28,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(FirebaseAuthenticationPlugin.class);
         super.onCreate(savedInstanceState);
         CookieManager.getInstance().setAcceptCookie(true);
 

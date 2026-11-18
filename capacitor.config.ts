@@ -1,4 +1,4 @@
-// capacitor.config.ts
+// ~/projects/who-parkv2/capacitor.config.ts
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
@@ -6,9 +6,14 @@ const config: CapacitorConfig = {
   appName: 'WHO PARK',
   webDir: 'public',
   server: {
-    url: 'https://whopark.in/dashboard',
+    url: 'https://www.whopark.in/login',
     cleartext: false,
-    allowNavigation: ['whopark.in', '*.whopark.in', 'who-park-v1*.vercel.app'],
+    allowNavigation: [
+      'www.whopark.in',
+      'whopark.in',
+      '*.whopark.in',
+      '*.vercel.app',
+    ],
   },
   plugins: {
     CapacitorCookies: {

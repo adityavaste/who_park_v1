@@ -1,6 +1,6 @@
 // app/api/auth/google/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { createRemoteJWKSet, jwtVerify, decodeJwt } from 'jose';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq, or } from 'drizzle-orm';
@@ -9,33 +9,49 @@ import { createToken } from '@/lib/auth';
 const FIREBASE_PROJECT_ID =
   process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!;
 
-// Google's official public keys for Firebase Authentication ID tokens
 const FIREBASE_JWKS = createRemoteJWKSet(
   new URL(
     'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com'
   )
 );
 
-async function verifyFirebaseIdToken(idToken: string) {
-  const { payload } = await jwtVerify(idToken, FIREBASE_JWKS, {
-    issuer: `https://securetoken.google.com/${FIREBASE_PROJECT_ID}`,
-    audience: FIREBASE_PROJECT_ID,
-  });
+const GOOGLE_JWKS = createRemoteJWKSet(
+  new URL('https://www.googleapis.com/oauth2/v3/certs')
+);
 
-  if (!payload.sub) {
-    throw new Error('Invalid Firebase token subject.');
+async function verifyGoogleOrFirebaseToken(idToken: string) {
+  const unverified = decodeJwt(idToken);
+  const issuer = unverified.iss || '';
+
+  if (issuer.startsWith('https://securetoken.google.com/')) {
+    if (!FIREBASE_PROJECT_ID) {
+      throw new Error('Server misconfigured: FIREBASE_PROJECT_ID missing.');
+    }
+    const { payload } = await jwtVerify(idToken, FIREBASE_JWKS, {
+      issuer: `https://securetoken.google.com/${FIREBASE_PROJECT_ID}`,
+      audience: FIREBASE_PROJECT_ID,
+    });
+    return payload as {
+      sub: string;
+      email?: string;
+      name?: string;
+      firebase?: { identities?: { email?: string[] } };
+    };
   }
 
-  return payload as {
-    sub: string;
-    email?: string;
-    name?: string;
-    firebase?: {
-      identities?: {
-        email?: string[];
-      };
+  if (issuer === 'https://accounts.google.com' || issuer === 'accounts.google.com') {
+    const { payload } = await jwtVerify(idToken, GOOGLE_JWKS, {
+      issuer: ['https://accounts.google.com', 'accounts.google.com'],
+    });
+    return payload as {
+      sub: string;
+      email?: string;
+      name?: string;
+      firebase?: { identities?: { email?: string[] } };
     };
-  };
+  }
+
+  throw new Error(`Unsupported token issuer: ${issuer}`);
 }
 
 export async function POST(req: NextRequest) {
@@ -46,15 +62,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Google token missing.' }, { status: 400 });
     }
 
-    if (!FIREBASE_PROJECT_ID) {
-      return NextResponse.json(
-        { error: 'Server misconfigured: FIREBASE_PROJECT_ID missing.' },
-        { status: 500 }
-      );
-    }
-
-    // 1. Cryptographically verify Firebase Google ID token via Google JWKS
-    const decoded = await verifyFirebaseIdToken(idToken);
+    // 1. Cryptographically verify either Firebase ID token or Google OAuth ID token
+    const decoded = await verifyGoogleOrFirebaseToken(idToken);
 
     const rawEmail =
       decoded.email || decoded.firebase?.identities?.email?.[0];
