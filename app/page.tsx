@@ -25,81 +25,84 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FFFDF0] text-black flex flex-col justify-between p-4 sm:p-8 selection:bg-yellow-300">
-      {/* Top Navbar */}
-      <nav className="max-w-5xl w-full mx-auto flex items-center justify-between bg-white border-4 border-black px-5 py-3.5 rounded-3xl shadow-[6px_6px_0px_#000]">
+    <main className="min-h-screen bg-[#FFFDF2] text-neutral-950 flex flex-col justify-between px-4 py-5 sm:px-8 sm:py-7 selection:bg-yellow-300">
+      {/* Minimal Top Bar */}
+      <header className="max-w-4xl w-full mx-auto flex items-center justify-between bg-white border-2 border-neutral-950 px-4 py-3 rounded-2xl shadow-[4px_4px_0px_#0a0a0a]">
         <div className="flex items-center gap-2.5">
-          <span className="text-2xl sm:text-3xl">🚕</span>
-          <span className="font-black text-xl sm:text-2xl tracking-tight">
+          <div className="w-9 h-9 rounded-xl bg-yellow-400 border-2 border-neutral-950 flex items-center justify-center font-black text-base">
+            W
+          </div>
+          <span className="font-black text-lg sm:text-xl tracking-tight">
             WHO<span className="text-yellow-500">PARK</span>
           </span>
         </div>
 
         <Link
           href="/login"
-          className="bg-yellow-400 hover:bg-yellow-300 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-black font-black text-xs sm:text-sm px-4 py-2 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] transition-all"
+          className="bg-yellow-400 hover:bg-yellow-300 active:translate-y-0.5 text-neutral-950 font-bold text-xs sm:text-sm px-4 py-2 rounded-xl border-2 border-neutral-950 shadow-[2px_2px_0px_#0a0a0a] transition"
         >
-          OWNER LOGIN 🔑
+          Owner Login
         </Link>
-      </nav>
+      </header>
 
-      {/* Center Hero Section */}
-      <section className="max-w-4xl w-full mx-auto my-12 text-center">
-        <div className="inline-block bg-yellow-300 border-3 border-black px-4 py-1.5 rounded-full font-black text-xs uppercase tracking-widest shadow-[4px_4px_0px_#000] -rotate-2 mb-6">
-          ★ 100% Anonymous Car Alerts ★
+      {/* Main Content */}
+      <section className="max-w-4xl w-full mx-auto my-10">
+        {/* Clean Hero + Interactive Sticker Preview */}
+        <div className="text-center max-w-2xl mx-auto">
+          <span className="inline-flex items-center gap-1.5 bg-yellow-200/80 border border-neutral-950 px-3 py-1 rounded-full text-xs font-bold tracking-wide mb-4">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            Private QR Alerts • Zero Phone Number Exposure
+          </span>
+
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.08]">
+            Blocked by a parked car?{' '}
+            <span className="bg-yellow-400 px-2.5 py-0.5 rounded-xl border-2 border-neutral-950 inline-block">
+              Alert in 5s.
+            </span>
+          </h1>
+
+          <p className="mt-4 text-sm sm:text-base text-neutral-600 font-medium max-w-lg mx-auto">
+            Scan the WHO PARK windshield sticker to ring the owner instantly—no phone numbers shared on either side.
+          </p>
         </div>
 
-        <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-none text-black">
-          BLOCKED BY A CAR?
-          <span className="block mt-2 bg-yellow-400 inline-block px-4 py-1 border-4 border-black rounded-2xl shadow-[6px_6px_0px_#000] rotate-1">
-            PING THE DRIVER!
-          </span>
-        </h1>
-
-        <p className="max-w-xl mx-auto mt-6 text-sm sm:text-base font-bold text-stone-700 leading-relaxed">
-          Scan the sticker on the windshield to alert the owner via WhatsApp or private call—without ever revealing phone numbers!
-        </p>
-
-        {/* Two Main Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mt-10 text-left">
-          {/* Option 1: Live Camera Scan + Manual Code */}
-          <div className="bg-yellow-400 border-4 border-black rounded-3xl p-6 sm:p-8 shadow-[8px_8px_0px_#000] flex flex-col justify-between relative">
-            <div className="absolute -top-4 -right-3 bg-white border-3 border-black px-3 py-1 rounded-full font-black text-xs rotate-6 shadow-[3px_3px_0px_#000]">
-              FOR PUBLIC
-            </div>
-
+        {/* Two Simple, Focused Action Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-10">
+          {/* Card 1: Public Scanner */}
+          <div className="bg-yellow-400 border-2 border-neutral-950 rounded-3xl p-6 sm:p-7 shadow-[6px_6px_0px_#0a0a0a] flex flex-col justify-between">
             <div>
-              <div className="w-14 h-14 bg-white border-3 border-black rounded-2xl flex items-center justify-center text-3xl shadow-[4px_4px_0px_#000] mb-5">
-                📷
+              <div className="flex items-center justify-between mb-4">
+                <span className="w-12 h-12 bg-white border-2 border-neutral-950 rounded-2xl flex items-center justify-center text-2xl shadow-[3px_3px_0px_#0a0a0a]">
+                  📷
+                </span>
+                <span className="bg-white border border-neutral-950 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider">
+                  Scan & Ping
+                </span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-black leading-tight">
-                SCAN QR & CONTACT OWNER
+
+              <h2 className="text-2xl font-black tracking-tight">
+                Scan Car QR
               </h2>
-              <p className="text-xs sm:text-sm font-bold text-black/80 mt-2 leading-relaxed">
-                Found a car blocking your path or with lights left on? Scan the windshield sticker right now!
+              <p className="text-sm text-neutral-900/80 font-medium mt-1.5 leading-relaxed">
+                Car blocking your exit or headlights left on? Scan the sticker to send an instant ring or private call.
               </p>
             </div>
 
-            <div className="mt-6 space-y-3">
-              {/* Primary Live Camera Button */}
+            <div className="mt-6 space-y-2.5">
               <button
                 onClick={() => setIsScannerOpen(true)}
-                className="w-full bg-white hover:bg-yellow-50 active:translate-x-1 active:translate-y-1 active:shadow-none text-black font-black text-sm sm:text-base py-4 px-5 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition-all flex items-center justify-between"
+                className="w-full bg-white hover:bg-neutral-50 active:translate-y-0.5 text-neutral-950 font-black text-sm sm:text-base py-3.5 px-5 rounded-2xl border-2 border-neutral-950 shadow-[4px_4px_0px_#0a0a0a] transition flex items-center justify-between"
               >
-                <span className="flex items-center gap-2.5">
-                  <span className="text-xl">📸</span>
-                  <span>OPEN CAMERA SCANNER</span>
-                </span>
-                <span className="text-xl">➔</span>
+                <span>Open QR Scanner</span>
+                <span className="text-lg">→</span>
               </button>
 
-              {/* Secondary Manual Code Toggle */}
               {!showCodeInput ? (
                 <button
                   onClick={() => setShowCodeInput(true)}
-                  className="w-full text-center text-xs font-black text-black/80 hover:text-black underline pt-1"
+                  className="w-full text-center text-xs font-bold text-neutral-900/80 hover:text-neutral-950 underline pt-1"
                 >
-                  Or type sticker code manually
+                  Enter sticker code manually
                 </button>
               ) : (
                 <form onSubmit={handleGoToVehicle} className="pt-1 flex gap-2">
@@ -109,60 +112,87 @@ export default function HomePage() {
                     placeholder="e.g. a9b2c3d4"
                     value={tagCode}
                     onChange={(e) => setTagCode(e.target.value)}
-                    className="flex-1 bg-white border-3 border-black rounded-xl px-3.5 py-2.5 text-sm font-black font-mono shadow-[3px_3px_0px_#000] focus:outline-none"
+                    className="flex-1 bg-white border-2 border-neutral-950 rounded-xl px-3.5 py-2 text-sm font-bold font-mono focus:outline-none"
                   />
                   <button
                     type="submit"
-                    className="bg-black text-yellow-400 font-black text-xs px-4 py-2.5 rounded-xl border-3 border-black hover:bg-stone-800 transition"
+                    className="bg-neutral-950 text-yellow-400 font-bold text-xs px-4 py-2 rounded-xl hover:bg-neutral-800 transition"
                   >
-                    GO!
+                    Go
                   </button>
                 </form>
               )}
             </div>
           </div>
 
-          {/* Option 2: Car Owner Dashboard */}
-          <div className="bg-white border-4 border-black rounded-3xl p-6 sm:p-8 shadow-[8px_8px_0px_#000] flex flex-col justify-between relative">
-            <div className="absolute -top-4 -right-3 bg-yellow-300 border-3 border-black px-3 py-1 rounded-full font-black text-xs -rotate-3 shadow-[3px_3px_0px_#000]">
-              FOR CAR OWNERS
-            </div>
-
+          {/* Card 2: Vehicle Owner */}
+          <div className="bg-white border-2 border-neutral-950 rounded-3xl p-6 sm:p-7 shadow-[6px_6px_0px_#0a0a0a] flex flex-col justify-between">
             <div>
-              <div className="w-14 h-14 bg-yellow-300 border-3 border-black rounded-2xl flex items-center justify-center text-3xl shadow-[4px_4px_0px_#000] mb-5">
-                🚘
+              <div className="flex items-center justify-between mb-4">
+                <span className="w-12 h-12 bg-yellow-300 border-2 border-neutral-950 rounded-2xl flex items-center justify-center text-2xl shadow-[3px_3px_0px_#0a0a0a]">
+                  🚘
+                </span>
+                <span className="bg-yellow-100 border border-neutral-950 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider">
+                  Vehicle Owners
+                </span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-black leading-tight">
-                LOGIN TO OWNER DASHBOARD
+
+              <h2 className="text-2xl font-black tracking-tight">
+                My Garage & Sticker
               </h2>
-              <p className="text-xs sm:text-sm font-bold text-stone-600 mt-2 leading-relaxed">
-                Register your vehicle, download your custom windshield QR sticker, and check live alert logs in your garage portal.
+              <p className="text-sm text-neutral-600 font-medium mt-1.5 leading-relaxed">
+                Generate your free windshield QR sticker, receive loud instant alerts, and reply with one tap.
               </p>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-6 space-y-2.5">
               <Link
                 href="/login"
-                className="w-full bg-yellow-400 hover:bg-yellow-300 active:translate-x-1 active:translate-y-1 active:shadow-none text-black font-black text-sm sm:text-base py-4 px-5 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition-all flex items-center justify-between"
+                className="w-full bg-yellow-400 hover:bg-yellow-300 active:translate-y-0.5 text-neutral-950 font-black text-sm sm:text-base py-3.5 px-5 rounded-2xl border-2 border-neutral-950 shadow-[4px_4px_0px_#0a0a0a] transition flex items-center justify-between"
               >
-                <span>GO TO MY GARAGE</span>
-                <span className="text-xl">➔</span>
+                <span>Open Owner Dashboard</span>
+                <span className="text-lg">→</span>
               </Link>
+
+              <p className="text-center text-xs font-medium text-neutral-500 pt-1">
+                1-tap Google Sign-In • Free forever
+              </p>
             </div>
+          </div>
+        </div>
+
+        {/* Simple 3-Step Strip */}
+        <div className="mt-8 bg-white border-2 border-neutral-950 rounded-2xl p-4 sm:px-6 shadow-[4px_4px_0px_#0a0a0a] grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs sm:text-sm">
+          <div className="flex items-center gap-3">
+            <span className="w-7 h-7 rounded-lg bg-yellow-400 border border-neutral-950 font-black flex items-center justify-center shrink-0">
+              1
+            </span>
+            <span className="font-bold text-neutral-800">Stick QR on windshield</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-7 h-7 rounded-lg bg-yellow-400 border border-neutral-950 font-black flex items-center justify-center shrink-0">
+              2
+            </span>
+            <span className="font-bold text-neutral-800">Anyone scans in 5 seconds</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-7 h-7 rounded-lg bg-yellow-400 border border-neutral-950 font-black flex items-center justify-center shrink-0">
+              3
+            </span>
+            <span className="font-bold text-neutral-800">Your phone rings privately</span>
           </div>
         </div>
       </section>
 
-      {/* Bottom Footer */}
-      <footer className="max-w-5xl w-full mx-auto text-center pt-6 pb-2">
-        <div className="inline-block bg-white border-3 border-black px-4 py-2 rounded-2xl shadow-[4px_4px_0px_#000] text-xs font-black text-stone-700">
-          🛡️ ZERO SPAM • PRIVACY FIRST • BUILT FOR SMART PARKING
-        </div>
+      {/* Clean Footer */}
+     {/* Clean Footer */}
+      <footer className="max-w-4xl w-full mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-neutral-500 font-medium pt-4">
+        <span>© 2026 WHO PARK • Privacy-First Vehicle Alerts</span>
         <Link
           href="/parking-solutions"
-          className="underline font-black text-black hover:text-stone-700 px-7"
+          className="font-bold text-neutral-800 hover:text-black underline"
         >
-          Wrong Parking Solutions & FAQ
+          Parking Solutions & FAQ
         </Link>
       </footer>
 

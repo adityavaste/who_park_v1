@@ -33,3 +33,12 @@
 {"timestamp":"00:53:04.797","source":"Server","level":"LOG","message":"✓ Compiled in 215ms"}
 {"timestamp":"00:53:12.519","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
 {"timestamp":"00:53:15.205","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"01:00:20.077","source":"Server","level":"LOG","message":"✓ Compiled in 486ms"}
+{"timestamp":"01:00:52.310","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"01:02:18.278","source":"Server","level":"LOG","message":"✓ Compiled in 163ms"}
+{"timestamp":"01:05:00.964","source":"Server","level":"LOG","message":"✓ Compiled in 605ms"}
+{"timestamp":"01:05:11.230","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"01:06:33.772","source":"Server","level":"WARN","message":"⚠ Fast Refresh had to perform a full reload when ./app/dashboard/page.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload"}
+{"timestamp":"01:06:33.798","source":"Server","level":"LOG","message":"✓ Compiled in 167ms"}
+{"timestamp":"01:06:34.360","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"01:07:05.629","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
