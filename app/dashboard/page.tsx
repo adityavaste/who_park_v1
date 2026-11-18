@@ -536,7 +536,7 @@ export default function DashboardPage() {
               </button>
             ) : (
               <Link
-                href="/login"
+                href="/"
                 className="bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-bold text-xs px-4 py-2 rounded-xl border-2 border-neutral-950 shadow-[2px_2px_0px_#0a0a0a]"
               >
                 Login
