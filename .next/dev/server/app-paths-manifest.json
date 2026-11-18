@@ -1,9 +1,12 @@
 {
-  "/api/alerts/status/[id]/route": "app/api/alerts/status/[id]/route.js",
-  "/api/calls/[id]/route": "app/api/calls/[id]/route.js",
+  "/api/auth/google/route": "app/api/auth/google/route.js",
   "/api/calls/route": "app/api/calls/route.js",
-  "/api/resolve/[slug]/route": "app/api/resolve/[slug]/route.js",
+  "/api/owner/vehicles/route": "app/api/owner/vehicles/route.js",
+  "/api/qr/image/[slug]/route": "app/api/qr/image/[slug]/route.js",
+  "/api/vehicles/register/route": "app/api/vehicles/register/route.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/icon-192x192.png/route": "app/icon-192x192.png/route.js",
+  "/login/page": "app/login/page.js",
   "/manifest.webmanifest/route": "app/manifest.webmanifest/route.js",
-  "/v/[slug]/page": "app/v/[slug]/page.js"
+  "/page": "app/page.js"
 }
