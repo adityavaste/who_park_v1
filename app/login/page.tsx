@@ -1,7 +1,7 @@
 // app/login/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Capacitor } from '@capacitor/core';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
@@ -17,6 +17,21 @@ export default function LoginPage() {
   const [needsPhone, setNeedsPhone] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+
+  // Auto-redirect to /dashboard if user already has an active session
+  useEffect(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('whopark_token')) {
+      fetch('/api/owner/vehicles', { credentials: 'include' })
+        .then((res) => {
+          if (res.ok) {
+            router.replace('/dashboard');
+          } else {
+            localStorage.removeItem('whopark_token');
+          }
+        })
+        .catch(() => {});
+    }
+  }, [router]);
 
   async function handleGoogleLogin() {
     setError('');

@@ -461,7 +461,7 @@ export default function DashboardPage() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('whopark_token');
     }
-    router.push('/login');
+    router.push('/');
   }
 
   async function handleAddVehicle(e: React.FormEvent) {
