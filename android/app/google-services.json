@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "368085102522-k71ctc4smlsuomlglcocmsknhsrbq00f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "in.whopark.app",
+            "certificate_hash": "0630fbdf4bab02d85941cb1b1aafaac49f52baf7"
+          }
+        },
+        {
           "client_id": "368085102522-e57qq06r7m2ds555oa3ikh7jc69v9c90.apps.googleusercontent.com",
           "client_type": 3
         }

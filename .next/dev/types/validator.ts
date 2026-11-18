@@ -184,10 +184,10 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
-// Validate ../../../app/api/auth/login/route.ts
+// Validate ../../../app/api/auth/google/route.ts
 {
-  type __IsExpected<Specific extends RouteHandlerConfig<"/api/auth/login">> = Specific
-  const handler = {} as typeof import("../../../app/api/auth/login/route.js")
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/auth/google">> = Specific
+  const handler = {} as typeof import("../../../app/api/auth/google/route.js")
   type __Check = __IsExpected<typeof handler>
   
   // @ts-ignore

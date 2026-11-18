@@ -1,3 +1,4 @@
+// lib/auth.ts
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
@@ -9,7 +10,7 @@ export async function createToken(userId: string, phone: string): Promise<string
   return await new SignJWT({ userId, phone })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('30d')
+    .setExpirationTime('400d')
     .sign(secretKey);
 }
 

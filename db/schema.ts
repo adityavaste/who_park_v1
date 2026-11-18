@@ -1,10 +1,12 @@
+// db/schema.ts
 import { pgTable, uuid, varchar, boolean, timestamp, text } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
+  email: text('email').unique(),
   phone: varchar('phone', { length: 15 }).notNull().unique(),
   fullName: varchar('full_name', { length: 100 }),
-  password: varchar('password', { length: 255 }).notNull(),
+  password: varchar('password', { length: 255 }),
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
@@ -32,7 +34,7 @@ export const alertLogs = pgTable('alert_logs', {
   alertType: varchar('alert_type', { length: 30 }).notNull(),
   scannerIp: varchar('scanner_ip', { length: 45 }),
   status: varchar('status', { length: 20 }).default('SENT'),
-  ownerReply: varchar('owner_reply', { length: 120 }), // 👈 Quick reply from owner
+  ownerReply: varchar('owner_reply', { length: 120 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
@@ -45,12 +47,10 @@ export const pushSubscriptions = pgTable('push_subscriptions', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
-
-// db/schema.ts (add this table alongside your existing tables)
 export const callSessions = pgTable('call_sessions', {
   id: uuid('id').defaultRandom().primaryKey(),
   tagId: uuid('tag_id').references(() => qrTags.id, { onDelete: 'cascade' }).notNull(),
-  status: varchar('status', { length: 20 }).default('RINGING').notNull(), // RINGING | CONNECTED | ENDED
+  status: varchar('status', { length: 20 }).default('RINGING').notNull(),
   offerSdp: text('offer_sdp').notNull(),
   answerSdp: text('answer_sdp'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
