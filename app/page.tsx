@@ -1,16 +1,22 @@
 // src/app/page.tsx
 'use client';
 
+import { redirect } from 'next/navigation';
+import { getSession } from '@/lib/auth';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import QrScannerModal from '@/components/QrScannerModal';
 
-export default function HomePage() {
+export default async function HomePage() {
   const router = useRouter();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [tagCode, setTagCode] = useState('');
+  const session = await getSession();
+  if (session) {
+    redirect('/dashboard');
+  }
 
   function handleGoToVehicle(e: React.FormEvent) {
     e.preventDefault();
