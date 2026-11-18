@@ -13,17 +13,26 @@ export default function HomePage() {
   const [tagCode, setTagCode] = useState('');
 
   // Auto-redirect already logged-in users straight to /dashboard
-  useEffect(() => {
-    fetch('/api/owner/vehicles', { credentials: 'include' })
-      .then((res) => {
-        if (res.ok) {
-          router.replace('/dashboard');
-        } else if (typeof window !== 'undefined') {
-          localStorage.removeItem('whopark_token');
-        }
-      })
-      .catch(() => {});
-  }, [router]);
+ // Inside src/app/page.tsx
+useEffect(() => {
+  if (typeof window !== 'undefined' && sessionStorage.getItem('just_logged_out')) {
+    sessionStorage.removeItem('just_logged_out');
+    return;
+  }
+
+  fetch('/api/owner/vehicles', {
+    credentials: 'include',
+    cache: 'no-store',
+  })
+    .then((res) => {
+      if (res.ok) {
+        router.replace('/dashboard');
+      } else if (typeof window !== 'undefined') {
+        localStorage.removeItem('whopark_token');
+      }
+    })
+    .catch(() => {});
+}, [router]);
 
   function handleGoToVehicle(e: React.FormEvent) {
     e.preventDefault();

@@ -107,3 +107,7 @@
 {"timestamp":"01:31:04.186","source":"Browser","level":"ERROR","message":"A component was suspended by an uncached promise. Creating promises inside a Client Component or hook is not yet supported, except via a Suspense-compatible library or framework. "}
 {"timestamp":"01:31:04.186","source":"Server","level":"ERROR","message":"[browser] \"A component was suspended by an uncached promise. Creating promises inside a Client Component or hook is not yet supported, except via a Suspense-compatible library or framework.\" \"\""}
 {"timestamp":"01:31:08.649","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"01:59:48.193","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"02:17:45.345","source":"Server","level":"WARN","message":"The `fromJSON` method is deprecated. Please use the `JWT` constructor instead. For more details, see https://cloud.google.com/docs/authentication/external/externally-sourced-credentials."}
+{"timestamp":"02:17:45.763","source":"Server","level":"ERROR","message":"[FCM] Delivery error: \"messaging/registration-token-not-registered\" \"NotRegistered\""}
+{"timestamp":"02:17:45.817","source":"Server","level":"ERROR","message":"[FCM] Delivery error: \"messaging/registration-token-not-registered\" \"NotRegistered\""}
