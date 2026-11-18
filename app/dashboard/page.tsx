@@ -455,15 +455,20 @@ export default function DashboardPage() {
     };
   }, []);
 
-  async function handleLogout() {
-    cleanupOwnerCall();
-    await fetch('/api/auth/logout', { method: 'POST' });
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('whopark_token');
-    }
-    router.push('/');
-  }
+async function handleLogout() {
+  try {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+    });
+  } catch {}
 
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('whopark_token');
+    sessionStorage.setItem('just_logged_out', '1');
+    window.location.href = '/';
+  }
+}
   async function handleAddVehicle(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);

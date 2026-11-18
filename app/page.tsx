@@ -13,17 +13,26 @@ export default function HomePage() {
   const [tagCode, setTagCode] = useState('');
 
   // Auto-redirect already logged-in users straight to /dashboard
-  useEffect(() => {
-    fetch('/api/owner/vehicles', { credentials: 'include' })
-      .then((res) => {
-        if (res.ok) {
-          router.replace('/dashboard');
-        } else if (typeof window !== 'undefined') {
-          localStorage.removeItem('whopark_token');
-        }
-      })
-      .catch(() => {});
-  }, [router]);
+ // Inside src/app/page.tsx
+useEffect(() => {
+  if (typeof window !== 'undefined' && sessionStorage.getItem('just_logged_out')) {
+    sessionStorage.removeItem('just_logged_out');
+    return;
+  }
+
+  fetch('/api/owner/vehicles', {
+    credentials: 'include',
+    cache: 'no-store',
+  })
+    .then((res) => {
+      if (res.ok) {
+        router.replace('/dashboard');
+      } else if (typeof window !== 'undefined') {
+        localStorage.removeItem('whopark_token');
+      }
+    })
+    .catch(() => {});
+}, [router]);
 
   function handleGoToVehicle(e: React.FormEvent) {
     e.preventDefault();
@@ -151,7 +160,7 @@ export default function HomePage() {
               </div>
 
               <h2 className="text-2xl font-black tracking-tight">
-                My Garage & Sticker
+                My vehicle's & Sticker
               </h2>
               <p className="text-sm text-neutral-600 font-medium mt-1.5 leading-relaxed">
                 Generate your free windshield QR sticker, receive loud instant alerts, and reply with one tap.
