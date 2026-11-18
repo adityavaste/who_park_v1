@@ -1,22 +1,29 @@
 // src/app/page.tsx
 'use client';
 
-import { redirect } from 'next/navigation';
-import { getSession } from '@/lib/auth';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import QrScannerModal from '@/components/QrScannerModal';
 
-export default async function HomePage() {
+export default function HomePage() {
   const router = useRouter();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [tagCode, setTagCode] = useState('');
-  const session = await getSession();
-  if (session) {
-    redirect('/dashboard');
-  }
+
+  // Auto-redirect already logged-in users straight to /dashboard
+  useEffect(() => {
+    fetch('/api/owner/vehicles', { credentials: 'include' })
+      .then((res) => {
+        if (res.ok) {
+          router.replace('/dashboard');
+        } else if (typeof window !== 'undefined') {
+          localStorage.removeItem('whopark_token');
+        }
+      })
+      .catch(() => {});
+  }, [router]);
 
   function handleGoToVehicle(e: React.FormEvent) {
     e.preventDefault();
@@ -191,7 +198,6 @@ export default async function HomePage() {
       </section>
 
       {/* Clean Footer */}
-     {/* Clean Footer */}
       <footer className="max-w-4xl w-full mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-neutral-500 font-medium pt-4">
         <span>© 2026 WHO PARK • Privacy-First Vehicle Alerts</span>
         <Link
