@@ -4,6 +4,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import PrintStickerCard from '@/components/PrintStickerCard';
 
 interface VehicleDetails {
   plateNumber: string;
@@ -12,7 +13,7 @@ interface VehicleDetails {
 }
 
 function StickerPrintContent() {
-  const [appOrigin, setAppOrigin] = useState<string>('https://whopark.in');
+  const [appOrigin, setAppOrigin] = useState<string>('https://www.whopark.in');
 
   const params = useParams();
   const router = useRouter();
@@ -33,7 +34,6 @@ function StickerPrintContent() {
 
     async function loadVehicleSticker() {
       try {
-        // Verify owner session and fetch their vehicles so only the owner can view/print
         const res = await fetch('/api/owner/vehicles', { credentials: 'include' });
         if (res.status === 401) {
           router.push('/login');
@@ -65,7 +65,7 @@ function StickerPrintContent() {
     return (
       <main className="min-h-screen bg-[#FFFDF0] flex items-center justify-center p-4">
         <div className="bg-yellow-300 border-4 border-black p-6 rounded-3xl shadow-[6px_6px_0px_#000] font-black text-lg animate-bounce">
-          🖨️ PREPARING STICKER...
+          🖨️ PREPARING STICKERS...
         </div>
       </main>
     );
@@ -89,8 +89,8 @@ function StickerPrintContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FFFDF0] py-8 px-4 flex flex-col items-center justify-between selection:bg-yellow-300 print:bg-white print:p-0 print:min-h-0">
-      {/* Print-specific CSS */}
+    <main className="min-h-screen bg-[#FFFDF0] py-8 px-4 flex flex-col items-center selection:bg-yellow-300 print:bg-white print:p-0 print:min-h-0">
+      {/* Print-specific CSS: prints only the active sticker cleanly */}
       <style jsx global>{`
         @media print {
           @page {
@@ -102,87 +102,52 @@ function StickerPrintContent() {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
+          body * {
+            visibility: hidden;
+          }
+          #printable-sticker-area,
+          #printable-sticker-area * {
+            visibility: visible;
+          }
+          #printable-sticker-area {
+            position: fixed;
+            left: 50%;
+            top: 40px;
+            transform: translateX(-50%);
+          }
         }
       `}</style>
 
-      {/* Top Action Bar (Hidden when printing) */}
-      <div className="max-w-md w-full flex items-center justify-between gap-3 mb-8 print:hidden">
+      {/* Top Back Bar (Hidden when printing) */}
+      <div className="max-w-3xl w-full flex items-center justify-between gap-3 mb-6 print:hidden">
         <Link
           href="/dashboard"
-          className="bg-white hover:bg-yellow-100 text-black font-black text-xs px-4 py-2.5 rounded-xl border-3 border-black shadow-[3px_3px_0px_#000] transition"
+          className="bg-white hover:bg-yellow-100 text-black font-black text-xs px-4 py-2.5 rounded-xl border-2 border-black shadow-[3px_3px_0px_#000] transition"
         >
           ← BACK TO GARAGE
         </Link>
 
-        <button
-          onClick={() => window.print()}
-          className="bg-yellow-400 hover:bg-yellow-300 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none text-black font-black text-xs px-5 py-2.5 rounded-xl border-3 border-black shadow-[4px_4px_0px_#000] transition flex items-center gap-2"
-        >
-          <span>🖨️</span>
-          <span>PRINT / SAVE PDF</span>
-        </button>
+        <span className="font-mono font-black text-xs bg-yellow-300 border-2 border-black px-3 py-1.5 rounded-xl">
+          TAG ID: {vehicle.tagSlug}
+        </span>
       </div>
 
-      {/* Printable 3" x 4" Windshield Sticker Card */}
-      <div className="flex flex-col items-center justify-center my-auto">
-        <p className="text-xs font-black text-stone-500 uppercase tracking-widest mb-3 print:hidden">
-          ✂️ Cut along the dashed border (3&quot; × 4&quot; Standard Size)
-        </p>
-
-        {/* Outer Cut-Guide Wrapper */}
-        <div className="p-3 border-2 border-dashed border-stone-400 rounded-[28px] print:border-black">
-          {/* Exact 3in x 4in Sticker Body */}
-          <div
-            style={{ width: '3in', height: '4in' }}
-            className="bg-yellow-400 border-4 border-black rounded-3xl p-4 flex flex-col justify-between items-center text-center shadow-[6px_6px_0px_#000] print:shadow-none relative overflow-hidden"
-          >
-            {/* Top Brand Pill */}
-            <div className="w-full flex items-center justify-between bg-black text-yellow-400 px-3 py-1 rounded-full">
-              <span className="font-black text-[11px] tracking-wider">🚕 HONKSAFE</span>
-              <span className="font-black text-[9px] uppercase tracking-widest bg-yellow-400 text-black px-2 py-0.5 rounded-full">
-                PRIVATE ALERT
-              </span>
-            </div>
-
-            {/* Bold Call to Action */}
-            <div className="mt-1">
-              <h1 className="text-xl font-black text-black leading-none tracking-tight">
-                NEED ME TO MOVE?
-              </h1>
-              <p className="text-[10px] font-black text-black/80 mt-1 uppercase tracking-wide">
-                Scan with phone camera to alert driver
-              </p>
-            </div>
-
-            {/* Crisp White QR Frame */}
-            <div className="bg-white p-2.5 rounded-2xl border-4 border-black shadow-[4px_4px_0px_#000] print:shadow-none my-1">
-              <img
-                src={`/api/qr/image/${vehicle.tagSlug}?origin=${encodeURIComponent(appOrigin)}`}
-                alt={`QR Sticker for ${vehicle.plateNumber}`}
-                className="w-36 h-36 object-contain block"
-              />
-            </div>
-
-            {/* Vehicle Plate & Tag Code */}
-            <div className="w-full space-y-1">
-              <div className="bg-white border-3 border-black rounded-xl py-1 px-2 font-mono font-black text-sm tracking-widest text-black">
-                {vehicle.plateNumber}
-              </div>
-              <div className="flex items-center justify-between text-[9px] font-black text-black/80 px-1">
-                <span>🔒 NO NUMBERS SHARED</span>
-                <span className="font-mono">ID: {vehicle.tagSlug}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* 6-Style Sticker Selector, Live Preview, High-Res PNG Download & Print */}
+      <div className="max-w-3xl w-full">
+        <PrintStickerCard
+          vehicleNumber={vehicle.plateNumber}
+          vehicleModel={vehicle.makeModel || undefined}
+          slug={vehicle.tagSlug}
+          baseUrl={appOrigin}
+        />
       </div>
 
       {/* Helpful Printing Tips (Hidden when printing) */}
-      <div className="max-w-md w-full mt-8 bg-white border-3 border-black rounded-2xl p-4 shadow-[4px_4px_0px_#000] text-xs font-bold text-stone-700 space-y-1.5 print:hidden">
-        <p className="font-black text-black uppercase">💡 How to stick on your windshield:</p>
-        <p>1. Click <span className="font-black text-black">PRINT / SAVE PDF</span> above (enable &ldquo;Background graphics&rdquo; in print settings).</p>
-        <p>2. Print on glossy sticker paper or regular A4 paper and laminate.</p>
-        <p>3. Place inside the bottom-left corner of your front windshield facing outward.</p>
+      <div className="max-w-3xl w-full mt-6 bg-white border-2 border-black rounded-2xl p-4 sm:p-5 shadow-[4px_4px_0px_#000] text-xs font-bold text-stone-700 space-y-1.5 print:hidden">
+        <p className="font-black text-black uppercase">💡 How to stick on your vehicle:</p>
+        <p>1. Choose your favorite style above and click <span className="font-black text-black">Download High-Res PNG</span> or <span className="font-black text-black">Print Sticker</span>.</p>
+        <p>2. Print on glossy vinyl sticker paper, or print on regular A4 paper and laminate at any local print shop.</p>
+        <p>3. Place inside the bottom-left corner of your car windshield (or mudguard/visor on a bike) facing outward.</p>
       </div>
     </main>
   );
@@ -202,4 +167,4 @@ export default function PrintableStickerPage() {
       <StickerPrintContent />
     </Suspense>
   );
-}   
+}

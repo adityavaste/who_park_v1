@@ -160,7 +160,7 @@ useEffect(() => {
               </div>
 
               <h2 className="text-2xl font-black tracking-tight">
-                My Garage & Sticker
+                My vehicle's & Sticker
               </h2>
               <p className="text-sm text-neutral-600 font-medium mt-1.5 leading-relaxed">
                 Generate your free windshield QR sticker, receive loud instant alerts, and reply with one tap.
