@@ -1,25 +1,41 @@
 // app/api/auth/google/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { eq, or } from 'drizzle-orm';
 import { createToken } from '@/lib/auth';
 
-if (
-  !getApps().length &&
-  process.env.FIREBASE_PROJECT_ID &&
-  process.env.FIREBASE_CLIENT_EMAIL &&
-  process.env.FIREBASE_PRIVATE_KEY
-) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    }),
+const FIREBASE_PROJECT_ID =
+  process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!;
+
+// Google's official public keys for Firebase Authentication ID tokens
+const FIREBASE_JWKS = createRemoteJWKSet(
+  new URL(
+    'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com'
+  )
+);
+
+async function verifyFirebaseIdToken(idToken: string) {
+  const { payload } = await jwtVerify(idToken, FIREBASE_JWKS, {
+    issuer: `https://securetoken.google.com/${FIREBASE_PROJECT_ID}`,
+    audience: FIREBASE_PROJECT_ID,
   });
+
+  if (!payload.sub) {
+    throw new Error('Invalid Firebase token subject.');
+  }
+
+  return payload as {
+    sub: string;
+    email?: string;
+    name?: string;
+    firebase?: {
+      identities?: {
+        email?: string[];
+      };
+    };
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -30,9 +46,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Google token missing.' }, { status: 400 });
     }
 
-    // 1. Cryptographically verify Google sign-in token via Firebase Admin
-    const decoded = await getAuth().verifyIdToken(idToken);
-    const email = decoded.email?.toLowerCase().trim();
+    if (!FIREBASE_PROJECT_ID) {
+      return NextResponse.json(
+        { error: 'Server misconfigured: FIREBASE_PROJECT_ID missing.' },
+        { status: 500 }
+      );
+    }
+
+    // 1. Cryptographically verify Firebase Google ID token via Google JWKS
+    const decoded = await verifyFirebaseIdToken(idToken);
+
+    const rawEmail =
+      decoded.email || decoded.firebase?.identities?.email?.[0];
+    const email = rawEmail?.toLowerCase().trim();
     const googleName = fullName?.trim() || decoded.name || null;
 
     if (!email) {
@@ -49,7 +75,7 @@ export async function POST(req: NextRequest) {
       .where(eq(users.email, email))
       .limit(1);
 
-    // 3. First-time user flow
+    // 3. First-time email login flow
     if (!user) {
       const digits = (phone || '').replace(/\D/g, '');
       if (digits.length !== 10) {
@@ -78,7 +104,6 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        // Link Google email to legacy unverified account with this phone number
         [user] = await db
           .update(users)
           .set({
@@ -89,7 +114,6 @@ export async function POST(req: NextRequest) {
           .where(eq(users.id, phoneOwner.id))
           .returning();
       } else {
-        // Create brand-new verified account
         [user] = await db
           .insert(users)
           .values({
@@ -99,15 +123,26 @@ export async function POST(req: NextRequest) {
           })
           .returning();
       }
+    } else if (!user.email) {
+      [user] = await db
+        .update(users)
+        .set({ email })
+        .where(eq(users.id, user.id))
+        .returning();
     }
 
-    // 5. Issue 400-day session_token cookie matching lib/auth.ts
+    // 5. Issue 400-day session_token cookie
     const sessionToken = await createToken(user.id, user.phone);
 
     const response = NextResponse.json({
       success: true,
       token: sessionToken,
-      user: { id: user.id, email: user.email, phone: user.phone, fullName: user.fullName },
+      user: {
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        fullName: user.fullName,
+      },
     });
 
     response.cookies.set('session_token', sessionToken, {
@@ -128,7 +163,7 @@ export async function POST(req: NextRequest) {
       );
     }
     return NextResponse.json(
-      { error: 'Google sign-in verification failed. Please try again.' },
+      { error: error?.message || 'Google sign-in verification failed.' },
       { status: 401 }
     );
   }

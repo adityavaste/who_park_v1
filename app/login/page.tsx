@@ -79,11 +79,18 @@ export default function LoginPage() {
       }),
     });
 
-    const data = await res.json();
+    const rawText = await res.text();
+    let data: any = {};
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      setLoading(false);
+      throw new Error(`Server error (${res.status}). Please try again.`);
+    }
 
     if (!res.ok || !data.success) {
       setLoading(false);
-      throw new Error(data.error || 'Authentication failed.');
+      throw new Error(data.error || `Authentication failed (${res.status}).`);
     }
 
     if (data.needsPhone) {
