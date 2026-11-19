@@ -1,6 +1,11 @@
 // app/dashboard/page.tsx
 'use client';
 
+import {
+  enableCellphoneEarpiece,
+  enableLoudspeaker,
+  resetCallAudioRoute,
+} from '@/lib/audioRoute';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -67,6 +72,8 @@ export default function DashboardPage() {
   const [incomingCall, setIncomingCall] = useState<IncomingCallItem | null>(null);
   const [ownerCallStatus, setOwnerCallStatus] = useState<'IDLE' | 'RINGING' | 'CONNECTED'>('IDLE');
   const [ownerMuted, setOwnerMuted] = useState(false);
+  const [ownerSpeakerOn, setOwnerSpeakerOn] = useState(false);
+  const [ownerCallSecondsLeft, setOwnerCallSecondsLeft] = useState(180);
 
   const ownerCallStatusRef = useRef<'IDLE' | 'RINGING' | 'CONNECTED'>('IDLE');
   const incomingCallRef = useRef<IncomingCallItem | null>(null);
@@ -90,6 +97,12 @@ export default function DashboardPage() {
   const [newEmergency, setNewEmergency] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  function getAuthHeaders(): Record<string, string> {
+    if (typeof window === 'undefined') return {};
+    const token = localStorage.getItem('whopark_token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   function updateCallState(
     status: 'IDLE' | 'RINGING' | 'CONNECTED',
     call: IncomingCallItem | null
@@ -102,6 +115,7 @@ export default function DashboardPage() {
 
   function cleanupOwnerCall() {
     stopContinuousRing();
+    resetCallAudioRoute();
     if (ownerStreamRef.current) {
       ownerStreamRef.current.getTracks().forEach((t) => t.stop());
       ownerStreamRef.current = null;
@@ -112,6 +126,8 @@ export default function DashboardPage() {
     }
     updateCallState('IDLE', null);
     setOwnerMuted(false);
+    setOwnerSpeakerOn(false);
+    setOwnerCallSecondsLeft(180);
   }
 
   async function handleAnswerIncomingCall() {
@@ -135,10 +151,16 @@ export default function DashboardPage() {
 
       await fetch(`/api/calls/${activeCall.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({ status: 'CONNECTED', answerSdp }),
       });
 
+      await enableCellphoneEarpiece();
+      setOwnerSpeakerOn(false);
+      setOwnerCallSecondsLeft(180);
       updateCallState('CONNECTED', activeCall);
     } catch (err: any) {
       alert('Could not answer call: ' + (err?.message || 'Microphone error'));
@@ -152,11 +174,45 @@ export default function DashboardPage() {
     if (callId) {
       await fetch(`/api/calls/${callId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({ status: 'ENDED' }),
       }).catch(() => {});
     }
   }
+
+  async function toggleOwnerSpeakerMode() {
+    if (ownerSpeakerOn) {
+      await enableCellphoneEarpiece();
+      setOwnerSpeakerOn(false);
+    } else {
+      await enableLoudspeaker();
+      setOwnerSpeakerOn(true);
+    }
+  }
+
+  // 3-minute (180s) hard cutoff & live countdown on owner's side
+  useEffect(() => {
+    if (ownerCallStatus !== 'CONNECTED') {
+      setOwnerCallSecondsLeft(180);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setOwnerCallSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          handleRejectOrEndOwnerCall();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [ownerCallStatus]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -227,7 +283,10 @@ export default function DashboardPage() {
       await PushNotifications.addListener('registration', async (token) => {
         await fetch('/api/push/subscribe', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+          },
           body: JSON.stringify({ fcmToken: token.value }),
         });
         setAlertsActivated(true);
@@ -293,7 +352,10 @@ export default function DashboardPage() {
 
       const subRes = await fetch('/api/push/subscribe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({ subscription }),
       });
 
@@ -321,7 +383,10 @@ export default function DashboardPage() {
     const ok = await registerBackgroundPush(true);
     if (ok) {
       setAlertsActivated(true);
-      const testRes = await fetch('/api/push/test', { method: 'POST' });
+      const testRes = await fetch('/api/push/test', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
       const testData = await testRes.json();
       if (!testRes.ok || testData?.result?.sent === 0) {
         alert('Push diagnostic: ' + JSON.stringify(testData));
@@ -350,7 +415,10 @@ export default function DashboardPage() {
     try {
       await fetch('/api/alerts/reply', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({
           alertId: ringingAlert.id,
           replyMessage: replyText,
@@ -367,32 +435,60 @@ export default function DashboardPage() {
 
   async function loadDashboardData(silent = false) {
     if (!silent) setLoading(true);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const authHeaders = getAuthHeaders();
+
     try {
+      // 1. Check incoming calls in background (non-blocking so it never freezes dashboard load)
       if (ownerCallStatusRef.current === 'IDLE') {
-        const callRes = await fetch(`/api/calls?t=${Date.now()}`, { cache: 'no-store' });
-        const callData = await callRes.json().catch(() => ({}));
-        if (callData.success && callData.incomingCall) {
-          updateCallState('RINGING', callData.incomingCall);
-          startContinuousRing();
-        }
-      } else if (incomingCallRef.current) {
-        const statusRes = await fetch(`/api/calls/${incomingCallRef.current.id}?t=${Date.now()}`, {
+        fetch(`/api/calls?t=${Date.now()}`, {
+          credentials: 'include',
           cache: 'no-store',
-        });
-        const statusData = await statusRes.json().catch(() => ({}));
-        if (statusData.status === 'ENDED') {
-          cleanupOwnerCall();
-        }
+          headers: authHeaders,
+        })
+          .then((r) => r.json())
+          .then((callData) => {
+            if (callData?.success && callData?.incomingCall) {
+              updateCallState('RINGING', callData.incomingCall);
+              startContinuousRing();
+            }
+          })
+          .catch(() => {});
+      } else if (incomingCallRef.current) {
+        fetch(`/api/calls/${incomingCallRef.current.id}?t=${Date.now()}`, {
+          credentials: 'include',
+          cache: 'no-store',
+          headers: authHeaders,
+        })
+          .then((r) => r.json())
+          .then((statusData) => {
+            if (statusData?.status === 'ENDED') {
+              cleanupOwnerCall();
+            }
+          })
+          .catch(() => {});
       }
 
+      // 2. Fetch owner vehicles & alerts immediately with 8s timeout + token fallback
       const res = await fetch(`/api/owner/vehicles?t=${Date.now()}`, {
         credentials: 'include',
         cache: 'no-store',
+        signal: controller.signal,
+        headers: authHeaders,
       });
+
       if (res.status === 401) {
-        router.push('/login');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('whopark_token');
+          window.location.replace('/login');
+        } else {
+          router.replace('/login');
+        }
         return;
       }
+
       const data = await res.json();
       if (data.success) {
         setVehiclesList(data.vehicles || []);
@@ -424,9 +520,12 @@ export default function DashboardPage() {
           isFirstLoadRef.current = false;
         }
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        console.error('Dashboard load error:', err);
+      }
     } finally {
+      clearTimeout(timeoutId);
       if (!silent) setLoading(false);
     }
   }
@@ -455,27 +554,33 @@ export default function DashboardPage() {
     };
   }, []);
 
-async function handleLogout() {
-  try {
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
-    });
-  } catch {}
+  async function handleLogout() {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: getAuthHeaders(),
+      });
+    } catch {}
 
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('whopark_token');
-    sessionStorage.setItem('just_logged_out', '1');
-    window.location.href = '/';
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('whopark_token');
+      sessionStorage.setItem('just_logged_out', '1');
+      window.location.href = '/';
+    }
   }
-}
+
   async function handleAddVehicle(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/vehicles/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
         body: JSON.stringify({
           plateNumber: newPlate,
           makeModel: newModel,
@@ -964,11 +1069,27 @@ async function handleLogout() {
             <h3 className="text-2xl font-black font-mono mt-1 text-neutral-950">
               {incomingCall.plateNumber}
             </h3>
-            <p className="text-xs font-medium text-neutral-500 mt-1">
+
+            {ownerCallStatus === 'CONNECTED' && (
+              <div className="mt-2">
+                <span
+                  className={`inline-block px-3 py-1 rounded-full font-mono font-black text-xs border-2 border-neutral-950 ${
+                    ownerCallSecondsLeft <= 30
+                      ? 'bg-rose-500 text-white animate-pulse'
+                      : 'bg-yellow-400 text-neutral-950'
+                  }`}
+                >
+                  ⏱️ {String(Math.floor(ownerCallSecondsLeft / 60)).padStart(2, '0')}:
+                  {String(ownerCallSecondsLeft % 60).padStart(2, '0')} left (3m max)
+                </span>
+              </div>
+            )}
+
+            <p className="text-xs font-medium text-neutral-500 mt-1.5">
               Caller&apos;s phone number is hidden for privacy.
             </p>
 
-            <div className="mt-5 flex items-center gap-3">
+            <div className="mt-5 flex items-center gap-2">
               {ownerCallStatus === 'RINGING' ? (
                 <button
                   type="button"
@@ -978,18 +1099,30 @@ async function handleLogout() {
                   Answer Call
                 </button>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!ownerStreamRef.current) return;
-                    const next = !ownerMuted;
-                    ownerStreamRef.current.getAudioTracks().forEach((t) => (t.enabled = !next));
-                    setOwnerMuted(next);
-                  }}
-                  className="flex-1 bg-white text-neutral-950 font-bold text-xs py-3.5 rounded-xl border-2 border-neutral-950 shadow-[3px_3px_0px_#0a0a0a]"
-                >
-                  {ownerMuted ? 'Unmute' : 'Mute'}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!ownerStreamRef.current) return;
+                      const next = !ownerMuted;
+                      ownerStreamRef.current.getAudioTracks().forEach((t) => (t.enabled = !next));
+                      setOwnerMuted(next);
+                    }}
+                    className="flex-1 bg-white text-neutral-950 font-bold text-xs py-3.5 rounded-xl border-2 border-neutral-950 shadow-[3px_3px_0px_#0a0a0a]"
+                  >
+                    {ownerMuted ? 'Unmute' : 'Mute'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleOwnerSpeakerMode}
+                    className={`flex-1 font-bold text-xs py-3.5 rounded-xl border-2 border-neutral-950 shadow-[3px_3px_0px_#0a0a0a] ${
+                      ownerSpeakerOn ? 'bg-yellow-400 text-neutral-950' : 'bg-white text-neutral-950'
+                    }`}
+                  >
+                    {ownerSpeakerOn ? '🔊 Speaker' : '📱 Earpiece'}
+                  </button>
+                </>
               )}
 
               <button

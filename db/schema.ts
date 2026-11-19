@@ -1,5 +1,6 @@
 // db/schema.ts
-import { pgTable, uuid, varchar, boolean, timestamp, text } from 'drizzle-orm/pg-core';
+// db/schema.ts (line 2)
+import { pgTable, uuid, varchar, boolean, timestamp, text, integer, serial, index } from 'drizzle-orm/pg-core';// db/schema.ts
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -18,6 +19,7 @@ export const vehicles = pgTable('vehicles', {
   makeModel: varchar('make_model', { length: 100 }),
   emergencyContact: varchar('emergency_contact', { length: 15 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  qrDownloads: integer('qr_downloads').default(0).notNull(),
 });
 
 export const qrTags = pgTable('qr_tags', {
@@ -55,3 +57,23 @@ export const callSessions = pgTable('call_sessions', {
   answerSdp: text('answer_sdp'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
+
+export const callLogs = pgTable(
+  'call_logs',
+  {
+    id: serial('id').primaryKey(),
+    tagSlug: text('tag_slug').notNull(),
+    scannerHash: text('scanner_hash').notNull(),
+    callDateIst: text('call_date_ist').notNull(), // e.g., "2026-11-19"
+    durationSeconds: integer('duration_seconds').default(0).notNull(),
+    status: text('status').default('initiated').notNull(), // 'initiated' | 'connected' | 'ended'
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    tagScannerDayIdx: index('tag_scanner_day_idx').on(
+      table.tagSlug,
+      table.scannerHash,
+      table.callDateIst
+    ),
+  })
+);

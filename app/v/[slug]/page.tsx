@@ -1,15 +1,38 @@
 // app/v/[slug]/page.tsx
 'use client';
 
+import {
+  enableCellphoneEarpiece,
+  enableLoudspeaker,
+  resetCallAudioRoute,
+} from '@/lib/audioRoute';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { createCallerConnection } from '@/lib/webrtcCall';
+import PostAlertGrowthCard from '@/components/PostAlertGrowthCard';
 
 type VehicleData = {
   plateNumber: string;
   makeModel: string | null;
 };
+
+const MAX_CALLS_PER_DAY = 3;
+const MAX_CALL_DURATION_SECONDS = 180; // 3 minutes
+
+function getTodayIstKey() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+}
+
+function getOrCreateDeviceId() {
+  if (typeof window === 'undefined') return '';
+  let id = localStorage.getItem('whopark_device_id');
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem('whopark_device_id', id);
+  }
+  return id;
+}
 
 function ScannerContent() {
   const params = useParams();
@@ -25,15 +48,21 @@ function ScannerContent() {
   const [activeAlertId, setActiveAlertId] = useState<string | null>(null);
   const [ownerReply, setOwnerReply] = useState<string | null>(null);
 
-  // Cooldown & daily limit states
+  // Cooldown & daily ping limit states
   const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
   const [dailyBlocked, setDailyBlocked] = useState<boolean>(false);
   const [remainingToday, setRemainingToday] = useState<number | null>(null);
+
+  // Daily 3-Call Limit & 3-Minute Max Duration States
+  const [callsUsedToday, setCallsUsedToday] = useState<number>(0);
+  const [callLockedToday, setCallLockedToday] = useState<boolean>(false);
+  const [callNotice, setCallNotice] = useState<string | null>(null);
 
   // Anonymous WebRTC Call states & refs
   const [callState, setCallState] = useState<'IDLE' | 'RINGING' | 'CONNECTED'>('IDLE');
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [speakerOn, setSpeakerOn] = useState(false);
   const [callSeconds, setCallSeconds] = useState(0);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -41,6 +70,7 @@ function ScannerContent() {
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
 
   function cleanupCallAudio() {
+    resetCallAudioRoute();
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
@@ -52,13 +82,77 @@ function ScannerContent() {
     setCallState('IDLE');
     setActiveCallId(null);
     setIsMuted(false);
+    setSpeakerOn(false);
     setCallSeconds(0);
   }
 
+  // Load today's call usage for this specific QR (local + backend sync)
+  useEffect(() => {
+    if (!slug) return;
+    const todayKey = getTodayIstKey();
+    const storageKey = `whopark_calls_${slug}_${todayKey}`;
+    const localCount = Number(localStorage.getItem(storageKey) || '0');
+
+    if (localCount >= MAX_CALLS_PER_DAY) {
+      setCallsUsedToday(MAX_CALLS_PER_DAY);
+      setCallLockedToday(true);
+    } else {
+      setCallsUsedToday(localCount);
+    }
+
+    const deviceId = getOrCreateDeviceId();
+    fetch(
+      `/api/call/status?tagSlug=${encodeURIComponent(slug)}&deviceId=${encodeURIComponent(deviceId)}`
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && typeof data.usedCalls === 'number') {
+          const syncedUsed = Math.max(localCount, data.usedCalls);
+          setCallsUsedToday(syncedUsed);
+          localStorage.setItem(storageKey, String(syncedUsed));
+          if (syncedUsed >= MAX_CALLS_PER_DAY || data.locked) {
+            setCallLockedToday(true);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [slug]);
+
   async function handleStartAnonymousCall() {
+    if (callLockedToday || callsUsedToday >= MAX_CALLS_PER_DAY) {
+      setCallLockedToday(true);
+      setError('Daily call limit reached (3/3 calls used today for this vehicle).');
+      return;
+    }
+
     setError(null);
+    setCallNotice(null);
+
     try {
+      const deviceId = getOrCreateDeviceId();
+
+      // 1. Check & reserve daily call slot on backend (3 calls/day per QR)
+      const guardRes = await fetch('/api/call/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tagSlug: slug, deviceId }),
+      });
+
+      if (guardRes.status === 429) {
+        const guardData = await guardRes.json().catch(() => ({}));
+        setCallsUsedToday(MAX_CALLS_PER_DAY);
+        setCallLockedToday(true);
+        localStorage.setItem(
+          `whopark_calls_${slug}_${getTodayIstKey()}`,
+          String(MAX_CALLS_PER_DAY)
+        );
+        throw new Error(guardData.error || 'Daily call limit reached (3/3 calls today).');
+      }
+
       setCallState('RINGING');
+      await enableCellphoneEarpiece();
+      setSpeakerOn(false);
+
       const { pc, localStream, offerSdp } = await createCallerConnection((remoteStream) => {
         if (remoteAudioRef.current) {
           remoteAudioRef.current.srcObject = remoteStream;
@@ -72,11 +166,27 @@ function ScannerContent() {
       const res = await fetch('/api/calls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, offerSdp }),
+        body: JSON.stringify({ slug, offerSdp, deviceId }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Could not start call');
+      if (!res.ok) {
+        if (data.locked || res.status === 429) {
+          setCallsUsedToday(MAX_CALLS_PER_DAY);
+          setCallLockedToday(true);
+        }
+        throw new Error(data.error || 'Could not start call');
+      }
+
+      // Increment today's call count
+      const todayKey = getTodayIstKey();
+      const storageKey = `whopark_calls_${slug}_${todayKey}`;
+      const nextCount = Math.min(MAX_CALLS_PER_DAY, callsUsedToday + 1);
+      setCallsUsedToday(nextCount);
+      localStorage.setItem(storageKey, String(nextCount));
+      if (nextCount >= MAX_CALLS_PER_DAY) {
+        setCallLockedToday(true);
+      }
 
       setActiveCallId(data.callId);
     } catch (err: any) {
@@ -89,9 +199,12 @@ function ScannerContent() {
     }
   }
 
-  async function handleEndCall() {
+  async function handleEndCall(reasonNotice?: string) {
     const idToEnd = activeCallId;
     cleanupCallAudio();
+    if (reasonNotice) {
+      setCallNotice(reasonNotice);
+    }
     if (idToEnd) {
       await fetch(`/api/calls/${idToEnd}`, {
         method: 'PATCH',
@@ -110,6 +223,16 @@ function ScannerContent() {
     setIsMuted(nextMute);
   }
 
+  async function toggleSpeakerMode() {
+    if (speakerOn) {
+      await enableCellphoneEarpiece();
+      setSpeakerOn(false);
+    } else {
+      await enableLoudspeaker();
+      setSpeakerOn(true);
+    }
+  }
+
   // Poll for owner's WebRTC answer while RINGING or CONNECTED
   useEffect(() => {
     if (!activeCallId || callState === 'IDLE') return;
@@ -126,8 +249,15 @@ function ScannerContent() {
           return;
         }
 
-        if (data.status === 'CONNECTED' && data.answerSdp && callState === 'RINGING' && pcRef.current) {
+        if (
+          data.status === 'CONNECTED' &&
+          data.answerSdp &&
+          callState === 'RINGING' &&
+          pcRef.current
+        ) {
           await pcRef.current.setRemoteDescription(new RTCSessionDescription(data.answerSdp));
+          await enableCellphoneEarpiece();
+          setSpeakerOn(false);
           setCallState('CONNECTED');
         }
       } catch {}
@@ -136,12 +266,23 @@ function ScannerContent() {
     return () => clearInterval(poll);
   }, [activeCallId, callState]);
 
-  // Call duration timer
+  // Strict 3-Minute (180s) Max Call Duration Timer
   useEffect(() => {
     if (callState !== 'CONNECTED') return;
-    const timer = setInterval(() => setCallSeconds((s) => s + 1), 1000);
+
+    const timer = setInterval(() => {
+      setCallSeconds((prev) => {
+        if (prev + 1 >= MAX_CALL_DURATION_SECONDS) {
+          clearInterval(timer);
+          handleEndCall('⏱️ Call ended automatically after the 3-minute maximum limit.');
+          return MAX_CALL_DURATION_SECONDS;
+        }
+        return prev + 1;
+      });
+    }, 1000);
+
     return () => clearInterval(timer);
-  }, [callState]);
+  }, [callState, activeCallId]);
 
   useEffect(() => {
     return () => cleanupCallAudio();
@@ -188,7 +329,7 @@ function ScannerContent() {
     }
   }, [slug]);
 
-  // Live 1-second countdown ticker
+  // Live 1-second cooldown countdown ticker
   useEffect(() => {
     if (cooldownSeconds <= 0) return;
 
@@ -205,30 +346,54 @@ function ScannerContent() {
     return () => clearInterval(timer);
   }, [cooldownSeconds, slug]);
 
+  // Fetch vehicle with 8s timeout so it never hangs on "Finding Car..."
   useEffect(() => {
-    if (!slug) return;
+    if (!slug) {
+      setError('Invalid or missing sticker link.');
+      setLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     async function fetchVehicle() {
       try {
-        const res = await fetch(`/api/resolve/${slug}`);
+        const res = await fetch(`/api/resolve/${encodeURIComponent(slug)}?t=${Date.now()}`, {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData.error || 'Sticker not found!');
         }
         const data = await res.json();
         if (data.unclaimed) {
-          window.location.href = `/claim/${slug}`;
+          window.location.replace(`/claim/${slug}`);
           return;
+        }
+        if (!data.vehicle) {
+          throw new Error('Vehicle details could not be loaded.');
         }
         setVehicle(data.vehicle);
       } catch (err: any) {
-        setError(err.message || 'Could not load car details.');
+        if (err?.name === 'AbortError') {
+          setError('Network timed out while finding car. Please check your connection and try again.');
+        } else {
+          setError(err.message || 'Could not load car details.');
+        }
       } finally {
+        clearTimeout(timeoutId);
         setLoading(false);
       }
     }
 
     fetchVehicle();
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [slug]);
 
   async function handleSendAlert(alertType: string, label: string) {
@@ -312,18 +477,29 @@ function ScannerContent() {
           <p className="text-black font-bold text-sm mt-3 bg-yellow-200 border-2 border-black p-3 rounded-2xl">
             {error}
           </p>
-          <Link
-            href="/"
-            className="mt-5 inline-block bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs px-5 py-3 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000]"
-          >
-            ← GO BACK HOME
-          </Link>
+          <div className="mt-5 flex items-center justify-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="bg-black text-yellow-400 font-black text-xs px-4 py-3 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#facc15]"
+            >
+              🔄 RETRY
+            </button>
+            <Link
+              href="/"
+              className="bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs px-4 py-3 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000]"
+            >
+              ← HOME
+            </Link>
+          </div>
         </div>
       </main>
     );
   }
 
   const isLocked = sending || cooldownSeconds > 0 || dailyBlocked;
+  const remainingCallsToday = Math.max(0, MAX_CALLS_PER_DAY - callsUsedToday);
+  const remainingCallSeconds = Math.max(0, MAX_CALL_DURATION_SECONDS - callSeconds);
 
   return (
     <main className="min-h-screen bg-[#FFFDF0] py-6 px-4 flex flex-col justify-between max-w-md mx-auto selection:bg-yellow-300">
@@ -337,7 +513,7 @@ function ScannerContent() {
             href="/"
             className="bg-white hover:bg-yellow-100 text-black font-black text-xs px-3 py-1.5 rounded-xl border-3 border-black shadow-[2px_2px_0px_#000]"
           >
-            🚕 HONKSAFE
+            🚕 WHO PARK
           </Link>
           <span className="bg-yellow-300 text-black border-2 border-black text-[11px] font-black px-3 py-1 rounded-full uppercase">
             🔒 100% Private
@@ -418,6 +594,13 @@ function ScannerContent() {
           </div>
         )}
 
+        {/* Call Notice (e.g., 3-min cutoff reached) */}
+        {callNotice && (
+          <div className="bg-amber-200 border-4 border-black text-black p-3.5 rounded-2xl text-xs font-black mb-5 shadow-[4px_4px_0px_#000] text-center">
+            {callNotice}
+          </div>
+        )}
+
         {/* Success / Error Speech Bubbles */}
         {alertSuccess && (
           <div className="bg-white border-4 border-black text-black p-4 rounded-2xl text-sm font-black mb-5 shadow-[5px_5px_0px_#16a34a] flex items-center gap-3">
@@ -433,19 +616,23 @@ function ScannerContent() {
           </div>
         )}
 
-        {/* Anonymous Voice Call Button */}
+        {/* Anonymous Voice Call Button with 3-Calls/Day Lock */}
         <button
           type="button"
           onClick={handleStartAnonymousCall}
-          disabled={callState !== 'IDLE'}
-          className="w-full mb-4 bg-emerald-400 hover:bg-emerald-300 active:translate-x-1 active:translate-y-1 active:shadow-none text-black font-black text-sm sm:text-base py-4 px-5 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition-all flex items-center justify-between disabled:opacity-50"
+          disabled={callState !== 'IDLE' || callLockedToday}
+          className="w-full mb-4 bg-emerald-400 hover:bg-emerald-300 active:translate-x-1 active:translate-y-1 active:shadow-none text-black font-black text-sm sm:text-base py-4 px-5 rounded-2xl border-4 border-black shadow-[5px_5px_0px_#000] transition-all flex items-center justify-between disabled:bg-stone-200 disabled:text-stone-500 disabled:opacity-75 disabled:cursor-not-allowed disabled:shadow-none"
         >
           <span className="flex items-center gap-3">
-            <span className="text-2xl">📞</span>
-            <span>CALL DRIVER ANONYMOUSLY</span>
+            <span className="text-2xl">{callLockedToday ? '🔒' : '📞'}</span>
+            <span>
+              {callLockedToday
+                ? 'CALL LOCKED (3/3 USED TODAY)'
+                : 'CALL DRIVER ANONYMOUSLY'}
+            </span>
           </span>
-          <span className="text-xs bg-black text-emerald-300 px-2.5 py-1 rounded-full">
-            FREE AUDIO
+          <span className="text-[11px] bg-black text-emerald-300 px-2.5 py-1 rounded-full shrink-0">
+            {callLockedToday ? 'RESET 12 AM' : `${remainingCallsToday}/3 • 3M MAX`}
           </span>
         </button>
 
@@ -487,9 +674,14 @@ function ScannerContent() {
             <span className="text-lg">➔</span>
           </button>
         </div>
+
+        {/* Post-Alert Conversion Card (shows after alert sent or call ended) */}
+        {(alertSuccess || activeAlertId || callNotice) && (
+          <PostAlertGrowthCard apkDownloadUrl="/whopark.apk" />
+        )}
       </div>
 
-      {/* Active / Ringing Anonymous Call Modal */}
+      {/* Active / Ringing Anonymous Call Modal with 3-Minute Countdown & Earpiece Toggle */}
       {callState !== 'IDLE' && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-emerald-300 rounded-3xl max-w-sm w-full p-7 border-4 border-black shadow-[10px_10px_0px_#fff] text-center">
@@ -500,23 +692,49 @@ function ScannerContent() {
               {callState === 'RINGING' ? 'RINGING DRIVER...' : '● ANONYMOUS CALL LIVE'}
             </p>
             <h3 className="text-2xl font-black font-mono mt-1">{vehicle?.plateNumber}</h3>
-            <p className="text-sm font-black font-mono mt-2">
-              {callState === 'CONNECTED' ? formatCountdown(callSeconds) : 'No phone numbers shared'}
-            </p>
 
-            <div className="mt-6 flex items-center gap-3">
-              {callState === 'CONNECTED' && (
-                <button
-                  type="button"
-                  onClick={toggleMute}
-                  className="flex-1 bg-white text-black font-black text-xs py-3.5 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000]"
+            {callState === 'CONNECTED' ? (
+              <div className="mt-3">
+                <span
+                  className={`inline-block px-3.5 py-1 rounded-full font-mono font-black text-sm border-2 border-black ${
+                    remainingCallSeconds <= 30
+                      ? 'bg-rose-500 text-white animate-pulse'
+                      : 'bg-yellow-300 text-black'
+                  }`}
                 >
-                  {isMuted ? '🔇 UNMUTE' : '🎙️ MUTE'}
-                </button>
+                  ⏱️ {formatCountdown(remainingCallSeconds)} left (3m max)
+                </span>
+              </div>
+            ) : (
+              <p className="text-xs font-black mt-2">
+                No phone numbers shared • {remainingCallsToday}/3 calls left today
+              </p>
+            )}
+
+            <div className="mt-6 flex items-center gap-2">
+              {callState === 'CONNECTED' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={toggleMute}
+                    className="flex-1 bg-white text-black font-black text-xs py-3.5 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000]"
+                  >
+                    {isMuted ? '🔇 UNMUTE' : '🎙️ MUTE'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleSpeakerMode}
+                    className={`flex-1 font-black text-xs py-3.5 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000] ${
+                      speakerOn ? 'bg-yellow-400 text-black' : 'bg-white text-black'
+                    }`}
+                  >
+                    {speakerOn ? '🔊 SPEAKER' : '📱 EARPIECE'}
+                  </button>
+                </>
               )}
               <button
                 type="button"
-                onClick={handleEndCall}
+                onClick={() => handleEndCall()}
                 className="flex-1 bg-rose-500 text-white font-black text-xs py-3.5 rounded-2xl border-3 border-black shadow-[3px_3px_0px_#000]"
               >
                 📴 END CALL
@@ -528,7 +746,7 @@ function ScannerContent() {
 
       {/* Footer */}
       <footer className="text-center font-bold text-xs text-stone-500 mt-8">
-        🛡️ Rate-limited (1 ping / 5 mins • Max 10 / day) to protect owners.
+        🛡️ Rate-limited (1 ping / 5 mins • Max 3 calls &amp; 10 pings / day) to protect owners.
       </footer>
     </main>
   );
