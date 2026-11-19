@@ -47,7 +47,8 @@ export default function LoginPage() {
           const tokenRes = await FirebaseAuthentication.getIdToken({ forceRefresh: true });
           token = tokenRes.token;
         }
-      } else {
+     } else {
+        if (!webAuth) throw new Error('Firebase auth not configured');
         const result = await signInWithPopup(webAuth, googleProvider);
         token = await result.user.getIdToken(true);
       }
