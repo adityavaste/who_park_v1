@@ -8,6 +8,13 @@ import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { signInWithPopup } from 'firebase/auth';
 import { webAuth, googleProvider } from '@/lib/firebaseClient';
 
+function getSafeRedirectTarget() {
+  if (typeof window === 'undefined') return '/dashboard';
+  const params = new URLSearchParams(window.location.search);
+  const redirectTo = params.get('redirect');
+  return redirectTo && redirectTo.startsWith('/') ? redirectTo : '/dashboard';
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [idToken, setIdToken] = useState<string>('');
@@ -18,13 +25,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
-  // Auto-redirect to /dashboard if user already has an active session
+  // Auto-redirect to target page (e.g., /claim/[slug] or /dashboard) if already logged in
   useEffect(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('whopark_token')) {
       fetch('/api/owner/vehicles', { credentials: 'include' })
         .then((res) => {
           if (res.ok) {
-            router.replace('/dashboard');
+            router.replace(getSafeRedirectTarget());
           } else {
             localStorage.removeItem('whopark_token');
           }
@@ -47,7 +54,7 @@ export default function LoginPage() {
           const tokenRes = await FirebaseAuthentication.getIdToken({ forceRefresh: true });
           token = tokenRes.token;
         }
-     } else {
+      } else {
         if (!webAuth) throw new Error('Firebase auth not configured');
         const result = await signInWithPopup(webAuth, googleProvider);
         token = await result.user.getIdToken(true);
@@ -121,7 +128,7 @@ export default function LoginPage() {
       localStorage.setItem('whopark_token', data.token);
     }
 
-    router.replace('/dashboard');
+    router.replace(getSafeRedirectTarget());
   }
 
   return (
@@ -235,7 +242,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full py-3.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 active:translate-y-0.5 border-2 border-neutral-900 text-neutral-900 font-bold text-sm shadow-[3px_3px_0px_0px_#171717] transition disabled:opacity-50"
             >
-              {loading ? 'Creating Account...' : 'Continue to Dashboard'}
+              {loading ? 'Creating Account...' : 'Continue'}
             </button>
 
             <button

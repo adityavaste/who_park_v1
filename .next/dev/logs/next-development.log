@@ -22,3 +22,19 @@
 {"timestamp":"00:06:11.785","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
 {"timestamp":"00:06:20.847","source":"Server","level":"ERROR","message":"⨯ Error: Failed query: select count(*) from \"call_logs\" where (\"call_logs\".\"tag_slug\" = $1 and \"call_logs\".\"scanner_hash\" = $2 and \"call_logs\".\"call_date_ist\" = $3)\nparams: d86d78cc,4074b165928d01fd1c9c47c164abd914,2026-11-19"}
 {"timestamp":"00:06:21.306","source":"Server","level":"ERROR","message":"⨯ Error: Failed query: select count(*) from \"call_logs\" where (\"call_logs\".\"tag_slug\" = $1 and \"call_logs\".\"scanner_hash\" = $2 and \"call_logs\".\"call_date_ist\" = $3)\nparams: d86d78cc,4074b165928d01fd1c9c47c164abd914,2026-11-19"}
+{"timestamp":"02:42:16.609","source":"Server","level":"LOG","message":"✓ Compiled in 808ms"}
+{"timestamp":"02:43:29.089","source":"Server","level":"LOG","message":"✓ Compiled in 129ms"}
+{"timestamp":"02:43:38.122","source":"Server","level":"LOG","message":"✓ Compiled in 106ms"}
+{"timestamp":"02:43:54.334","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"02:44:14.924","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"02:46:38.496","source":"Server","level":"WARN","message":"⚠ Fast Refresh had to perform a full reload when ./app/v/[slug]/page.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload"}
+{"timestamp":"02:46:38.514","source":"Server","level":"LOG","message":"✓ Compiled in 1039ms"}
+{"timestamp":"02:46:38.939","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"02:48:32.497","source":"Server","level":"LOG","message":"✓ Compiled in 264ms"}
+{"timestamp":"02:49:38.099","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"02:50:17.061","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"02:52:28.561","source":"Server","level":"LOG","message":"✓ Compiled in 308ms"}
+{"timestamp":"02:52:33.306","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"02:55:40.779","source":"Server","level":"LOG","message":"✓ Compiled in 683ms"}
+{"timestamp":"02:55:40.817","source":"Server","level":"WARN","message":"⚠ Fast Refresh had to perform a full reload when ./app/v/[slug]/page.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload"}
+{"timestamp":"02:55:42.084","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}

@@ -7,20 +7,31 @@ import { useRouter } from 'next/navigation';
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
+  const [batches, setBatches] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // Bulk Order Generator States
+  const [batchName, setBatchName] = useState('');
+  const [quantity, setQuantity] = useState<number>(50);
+  const [generatingBulk, setGeneratingBulk] = useState(false);
+  const [bulkError, setBulkError] = useState('');
+
   useEffect(() => {
-    fetch('/api/admin/stats', { credentials: 'include', cache: 'no-store' })
-      .then(async (res) => {
-        if (res.status === 401) {
+    Promise.all([
+      fetch('/api/admin/stats', { credentials: 'include', cache: 'no-store' }),
+      fetch('/api/admin/bulk-qr', { credentials: 'include', cache: 'no-store' }),
+    ])
+      .then(async ([statsRes, bulkRes]) => {
+        if (statsRes.status === 401 || bulkRes.status === 401) {
           router.replace('/admin/login');
-          return null;
+          return;
         }
-        return res.json();
-      })
-      .then((json) => {
-        if (json?.success) setData(json);
+        const statsJson = await statsRes.json().catch(() => null);
+        const bulkJson = await bulkRes.json().catch(() => null);
+
+        if (statsJson?.success) setData(statsJson);
+        if (bulkJson?.success) setBatches(bulkJson.batches || []);
         setLoading(false);
       })
       .catch(() => {
@@ -31,6 +42,37 @@ export default function AdminDashboardPage() {
   async function handleAdminLogout() {
     await fetch('/api/admin/logout', { method: 'POST', credentials: 'include' });
     router.replace('/admin/login');
+  }
+
+  async function handleGenerateBulk(e: React.FormEvent) {
+    e.preventDefault();
+    setBulkError('');
+    setGeneratingBulk(true);
+
+    try {
+      const res = await fetch('/api/admin/bulk-qr', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          batchName: batchName.trim() || `Bulk Batch (${quantity})`,
+          quantity,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to generate bulk stickers.');
+      }
+
+      const slugs = (json.tags || []).map((t: any) => t.publicSlug).join(',');
+      router.push(
+        `/admin/bulk-print?batch=${encodeURIComponent(json.batchName)}&slugs=${encodeURIComponent(slugs)}`
+      );
+    } catch (err: any) {
+      setBulkError(err.message || 'Could not generate bulk stickers.');
+      setGeneratingBulk(false);
+    }
   }
 
   if (loading || !data) {
@@ -72,7 +114,7 @@ export default function AdminDashboardPage() {
                 WHO PARK • ADMIN COMMAND CENTER
               </h1>
               <p className="text-xs text-neutral-400 font-medium">
-                Live Users, Vehicles, QR Stickers &amp; Scan Activity
+                Live Users, Vehicles, Bulk Sticker Batches &amp; Scan Activity
               </p>
             </div>
           </div>
@@ -121,6 +163,114 @@ export default function AdminDashboardPage() {
             </div>
             <div className="text-3xl font-black mt-1">{stats.totalAlerts}</div>
           </div>
+        </section>
+
+        {/* Bulk Sticker Print Generator (B2B / Society / Garage Batches) */}
+        <section className="bg-white border-2 border-neutral-950 rounded-3xl p-5 shadow-[5px_5px_0px_#0a0a0a]">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div>
+              <span className="bg-yellow-300 border border-neutral-950 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">
+                Scan-to-Activate Bulk Print
+              </span>
+              <h2 className="text-lg font-black mt-1">
+                📦 Generate Bulk Pre-Printed QR Stickers
+              </h2>
+              <p className="text-xs text-neutral-600 font-medium">
+                Print unclaimed QR stickers for housing societies, car washes, or events. Owners scan their sticker to bind their plate number in 10s.
+              </p>
+            </div>
+          </div>
+
+          {bulkError && (
+            <div className="mb-3 p-3 rounded-xl bg-rose-100 border-2 border-neutral-950 text-xs font-black text-rose-900">
+              💥 {bulkError}
+            </div>
+          )}
+
+          <form
+            onSubmit={handleGenerateBulk}
+            className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end"
+          >
+            <div className="sm:col-span-6">
+              <label className="block text-[11px] font-black uppercase mb-1">
+                Batch / Society / Garage Name
+              </label>
+              <input
+                type="text"
+                required
+                value={batchName}
+                onChange={(e) => setBatchName(e.target.value)}
+                placeholder="e.g. Ratan Neptune CHS - Hadapsar"
+                className="w-full px-3.5 py-2.5 rounded-xl border-2 border-neutral-950 text-sm font-bold focus:outline-none focus:bg-yellow-50"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-[11px] font-black uppercase mb-1">
+                Quantity (1–200)
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={200}
+                required
+                value={quantity}
+                onChange={(e) => setQuantity(Number(e.target.value))}
+                className="w-full px-3.5 py-2.5 rounded-xl border-2 border-neutral-950 text-sm font-black focus:outline-none focus:bg-yellow-50"
+              />
+            </div>
+
+            <div className="sm:col-span-4">
+              <button
+                type="submit"
+                disabled={generatingBulk}
+                className="w-full py-2.5 px-4 rounded-xl bg-yellow-400 hover:bg-yellow-300 active:translate-y-0.5 border-2 border-neutral-950 font-black text-sm shadow-[3px_3px_0px_#0a0a0a] transition disabled:opacity-50"
+              >
+                {generatingBulk
+                  ? 'Generating...'
+                  : `🖨️ Generate & Print ${quantity} QRs →`}
+              </button>
+            </div>
+          </form>
+
+          {/* Printed Batches Activation Tracker */}
+          {batches.length > 0 && (
+            <div className="mt-5 max-h-[220px] overflow-y-auto overflow-x-auto border border-neutral-200 rounded-2xl">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="sticky top-0 bg-yellow-100 z-10 border-b-2 border-neutral-950 text-neutral-700 uppercase">
+                  <tr>
+                    <th className="py-2 px-3">Batch Name</th>
+                    <th className="py-2 px-3">Activated / Total</th>
+                    <th className="py-2 px-3">Unclaimed Left</th>
+                    <th className="py-2 px-3">Created</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-200 font-semibold">
+                  {batches.map((b: any, idx: number) => {
+                    const unclaimed = Math.max(0, (b.total || 0) - (b.claimed || 0));
+                    return (
+                      <tr key={idx} className="hover:bg-amber-50/60">
+                        <td className="py-2 px-3 font-bold">{b.batchName}</td>
+                        <td className="py-2 px-3">
+                          <span className="bg-emerald-200 border border-neutral-950 px-2 py-0.5 rounded-md font-black">
+                            {b.claimed} / {b.total} Activated
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 font-mono font-bold text-neutral-600">
+                          {unclaimed} unclaimed
+                        </td>
+                        <td className="py-2 px-3 text-neutral-500 whitespace-nowrap">
+                          {b.createdAt
+                            ? new Date(b.createdAt).toLocaleDateString('en-IN')
+                            : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         {/* Quick Search Bar */}
