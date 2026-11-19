@@ -1,14 +1,24 @@
-{"timestamp":"00:00:02.605","source":"Server","level":"LOG","message":"- Cache Components enabled"}
-{"timestamp":"00:00:02.606","source":"Server","level":"LOG","message":"- Partial Prefetching enabled"}
-{"timestamp":"00:00:02.606","source":"Server","level":"LOG","message":"- Experiments (use with caution):"}
-{"timestamp":"00:00:02.607","source":"Server","level":"LOG","message":"  ✓ agentFeedback"}
-{"timestamp":"00:00:02.607","source":"Server","level":"LOG","message":""}
-{"timestamp":"00:00:05.954","source":"Server","level":"LOG","message":"○ Compiling / ..."}
-{"timestamp":"00:00:07.873","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
-{"timestamp":"00:00:19.853","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
-{"timestamp":"00:00:24.819","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
-{"timestamp":"00:00:41.894","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
-{"timestamp":"00:00:48.140","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
-{"timestamp":"00:15:23.370","source":"Server","level":"LOG","message":"✓ Compiled in 370ms"}
-{"timestamp":"00:17:25.593","source":"Server","level":"LOG","message":"✓ Compiled in 1304ms"}
-{"timestamp":"00:17:43.452","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:00:04.270","source":"Server","level":"LOG","message":"- Cache Components enabled"}
+{"timestamp":"00:00:04.271","source":"Server","level":"LOG","message":"- Partial Prefetching enabled"}
+{"timestamp":"00:00:04.271","source":"Server","level":"LOG","message":"- Experiments (use with caution):"}
+{"timestamp":"00:00:04.272","source":"Server","level":"LOG","message":"  ✓ agentFeedback"}
+{"timestamp":"00:00:04.272","source":"Server","level":"LOG","message":""}
+{"timestamp":"00:00:07.389","source":"Server","level":"LOG","message":"○ Compiling /dashboard ..."}
+{"timestamp":"00:00:16.517","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:00:16.653","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:04:22.108","source":"Server","level":"LOG","message":"✓ Compiled in 1425ms"}
+{"timestamp":"00:04:38.275","source":"Server","level":"LOG","message":"✓ Compiled in 785ms"}
+{"timestamp":"00:04:38.498","source":"Server","level":"WARN","message":"⚠ Fast Refresh had to perform a full reload when ./app/dashboard/page.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload"}
+{"timestamp":"00:04:38.588","source":"Server","level":"WARN","message":"⚠ Fast Refresh had to perform a full reload when ./app/dashboard/page.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload"}
+{"timestamp":"00:04:39.759","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:04:40.106","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:05:51.506","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:06:00.553","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:06:02.615","source":"Server","level":"ERROR","message":"⨯ Error: Failed query: select count(*) from \"call_logs\" where (\"call_logs\".\"tag_slug\" = $1 and \"call_logs\".\"scanner_hash\" = $2 and \"call_logs\".\"call_date_ist\" = $3)\nparams: slug,4074b165928d01fd1c9c47c164abd914,2026-11-19"}
+{"timestamp":"00:06:02.863","source":"Server","level":"ERROR","message":"⨯ Error: Failed query: select count(*) from \"call_logs\" where (\"call_logs\".\"tag_slug\" = $1 and \"call_logs\".\"scanner_hash\" = $2 and \"call_logs\".\"call_date_ist\" = $3)\nparams: slug,4074b165928d01fd1c9c47c164abd914,2026-11-19"}
+{"timestamp":"00:06:05.113","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:06:05.484","source":"Server","level":"ERROR","message":"⨯ Error: Failed query: select count(*) from \"call_logs\" where (\"call_logs\".\"tag_slug\" = $1 and \"call_logs\".\"scanner_hash\" = $2 and \"call_logs\".\"call_date_ist\" = $3)\nparams: slug,4074b165928d01fd1c9c47c164abd914,2026-11-19"}
+{"timestamp":"00:06:05.732","source":"Server","level":"ERROR","message":"⨯ Error: Failed query: select count(*) from \"call_logs\" where (\"call_logs\".\"tag_slug\" = $1 and \"call_logs\".\"scanner_hash\" = $2 and \"call_logs\".\"call_date_ist\" = $3)\nparams: slug,4074b165928d01fd1c9c47c164abd914,2026-11-19"}
+{"timestamp":"00:06:11.785","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:06:20.847","source":"Server","level":"ERROR","message":"⨯ Error: Failed query: select count(*) from \"call_logs\" where (\"call_logs\".\"tag_slug\" = $1 and \"call_logs\".\"scanner_hash\" = $2 and \"call_logs\".\"call_date_ist\" = $3)\nparams: d86d78cc,4074b165928d01fd1c9c47c164abd914,2026-11-19"}
+{"timestamp":"00:06:21.306","source":"Server","level":"ERROR","message":"⨯ Error: Failed query: select count(*) from \"call_logs\" where (\"call_logs\".\"tag_slug\" = $1 and \"call_logs\".\"scanner_hash\" = $2 and \"call_logs\".\"call_date_ist\" = $3)\nparams: d86d78cc,4074b165928d01fd1c9c47c164abd914,2026-11-19"}
