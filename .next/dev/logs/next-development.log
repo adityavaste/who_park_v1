@@ -35,3 +35,6 @@
 {"timestamp":"02:50:17.061","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
 {"timestamp":"02:52:28.561","source":"Server","level":"LOG","message":"✓ Compiled in 308ms"}
 {"timestamp":"02:52:33.306","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"02:55:40.779","source":"Server","level":"LOG","message":"✓ Compiled in 683ms"}
+{"timestamp":"02:55:40.817","source":"Server","level":"WARN","message":"⚠ Fast Refresh had to perform a full reload when ./app/v/[slug]/page.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload"}
+{"timestamp":"02:55:42.084","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
