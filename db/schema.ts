@@ -22,11 +22,14 @@ export const vehicles = pgTable('vehicles', {
   qrDownloads: integer('qr_downloads').default(0).notNull(),
 });
 
+// Inside db/schema.ts -> update qrTags table
 export const qrTags = pgTable('qr_tags', {
   id: uuid('id').defaultRandom().primaryKey(),
-  vehicleId: uuid('vehicle_id').references(() => vehicles.id, { onDelete: 'cascade' }).notNull(),
+  vehicleId: uuid('vehicle_id').references(() => vehicles.id, { onDelete: 'cascade' }), // nullable until claimed!
   publicSlug: varchar('public_slug', { length: 32 }).notNull().unique(),
+  batchName: varchar('batch_name', { length: 100 }), // e.g., "Ratan Neptune CHS - 50"
   isEnabled: boolean('is_enabled').default(true),
+  claimedAt: timestamp('claimed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
