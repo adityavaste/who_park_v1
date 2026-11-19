@@ -2337,3 +2337,33 @@ FAM | META SEQ | SST SEQ         | RANGE
   3 | 00001207 | 00001033 00001120 00001183 00001200 OBSOLETE SST
     |          | 00001033 00001120 00001183 00001200 SST DELETED
     |          | 00001036 00001121 00001184 00001204 META DELETED
+Time 2026-11-19T10:37:45.083917021Z
+Commit 00001214 775 keys in 19ms 188µs 317ns
+FAM | META SEQ | SST SEQ         | RANGE
+  0 | 00001212 | 00001211 SST    |                                                                             O                        | c44bdff4074eecdb-c44bdff4074eecdb (0 MiB, fresh, 38 bytes, 1 entries, 0 tombstones)
+  1 | 00001213 | 00001209 SST    | [==================================================================================================] | 00a4dec112afc24c-ffe59ae00070dae6 (0 MiB, fresh, 289919 bytes, 276 entries, 0 tombstones)
+  2 | 00001214 | 00001210 SST    | [==================================================================================================] | 00240e6ddf5fd3b9-ff3e8d578bd55c66 (0 MiB, fresh, 91183 bytes, 498 entries, 0 tombstones)
+  0 | 00001216 | Compaction:
+  0 | 00001216 | MERGE (1 keys):
+  0 | 00001216 | 00001153 INPUT  |                                                                             O                        | c44bdff4074eecdb-c44bdff4074eecdb
+  0 | 00001216 | 00001158 INPUT  |                                                                             O                        | c44bdff4074eecdb-c44bdff4074eecdb
+  0 | 00001216 | 00001165 INPUT  |                                                                             O                        | c44bdff4074eecdb-c44bdff4074eecdb
+  0 | 00001216 | 00001178 INPUT  |                                                                             O                        | c44bdff4074eecdb-c44bdff4074eecdb
+  0 | 00001216 | 00001191 INPUT  |                                                                             O                        | c44bdff4074eecdb-c44bdff4074eecdb
+  0 | 00001216 | 00001201 INPUT  |                                                                             O                        | c44bdff4074eecdb-c44bdff4074eecdb
+  0 | 00001216 | 00001211 INPUT  |                                                                             O                        | c44bdff4074eecdb-c44bdff4074eecdb
+  0 | 00001216 | 00001215 OUTPUT |                                                                             O                        | c44bdff4074eecdb-c44bdff4074eecdb (compacted)
+Time 2026-11-19T10:37:45.107183532Z
+Commit 00001217 1 keys in 15ms 364µs 835ns
+FAM | META SEQ | SST SEQ         | RANGE
+  0 | 00001216 | 00001215 SST    |                                                                             O                        | c44bdff4074eecdb-c44bdff4074eecdb (0 MiB, compacted, 38 bytes, 1 entries, 0 tombstones)
+  0 | 00001216 | 00001153 00001158 00001165 00001178 00001191 00001201 00001211 OBSOLETE SST
+    |          | 00001153 00001158 00001165 00001178 00001191 00001201 00001211 SST DELETED
+    |          | 00001154 00001159 00001166 00001179 00001192 00001202 00001212 META DELETED
+Time 2026-11-19T10:40:45.841871384Z
+Commit 00001225 2577 keys in 30ms 960µs 271ns
+FAM | META SEQ | SST SEQ         | RANGE
+  0 | 00001222 | 00001221 SST    |                                                                             O                        | c44bdff4074eecdb-c44bdff4074eecdb (0 MiB, fresh, 38 bytes, 1 entries, 0 tombstones)
+  3 | 00001223 | 00001218 SST    | [==================================================================================================] | 016880cbc3cee801-fedc654365ff360d (0 MiB, fresh, 1497 bytes, 122 entries, 0 tombstones)
+  2 | 00001224 | 00001219 SST    | [==================================================================================================] | 00da21db7a3b884f-ffd5ba9cd8cbc04f (0 MiB, fresh, 382527 bytes, 540 entries, 0 tombstones)
+  1 | 00001225 | 00001220 SST    | [==================================================================================================] | 0008d84718141f1a-ffe712e9b696a1a9 (0 MiB, fresh, 513626 bytes, 1914 entries, 0 tombstones)
