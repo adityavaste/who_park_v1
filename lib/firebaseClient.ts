@@ -11,13 +11,17 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
 };
 
-let app: FirebaseApp | null = null;
-let webAuth: Auth | null = null;
-
-if (typeof window !== 'undefined' && firebaseConfig.apiKey) {
-  app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-  webAuth = getAuth(app);
+export function getClientAuth(): Auth | null {
+  if (typeof window === 'undefined') return null;
+  if (!firebaseConfig.apiKey) {
+    console.error('Missing NEXT_PUBLIC_FIREBASE_API_KEY in client bundle');
+    return null;
+  }
+  const app: FirebaseApp = getApps().length
+    ? getApps()[0]
+    : initializeApp(firebaseConfig);
+  return getAuth(app);
 }
 
-export { webAuth };
+export const webAuth = getClientAuth();
 export const googleProvider = new GoogleAuthProvider();
