@@ -1,5 +1,16 @@
-// src/lib/plans.ts
+// lib/plans.ts
 export type PlanType = 'BASIC_199' | 'PLUS_299' | 'BUSINESS_999';
+
+export interface PlanConfig {
+  id: PlanType;
+  badge: string;
+  shortName: string;
+  priceInr: number;
+  maxVehicles: number;
+  includesPhysicalSticker: boolean;
+  validityDays: number;
+  features: string[];
+}
 
 export interface ShippingAddressInput {
   plateNumber?: string;
@@ -11,66 +22,50 @@ export interface ShippingAddressInput {
   pincode: string;
 }
 
-export const PLANS: Record<
-  PlanType,
-  {
-    id: PlanType;
-    name: string;
-    shortName: string;
-    priceInr: number;
-    amountPaise: number;
-    maxVehicles: number;
-    includesPhysicalSticker: boolean;
-    badge: string;
-    features: string[];
-  }
-> = {
+export const PLANS: Record<PlanType, PlanConfig> = {
   BASIC_199: {
     id: 'BASIC_199',
-    name: 'WHO PARK Essential (1 Vehicle • 1 Year)',
-    shortName: 'Essential • 1 Vehicle',
+    badge: 'Essential',
+    shortName: 'WHO PARK Essential',
     priceInr: 199,
-    amountPaise: 19900,
     maxVehicles: 1,
     includesPhysicalSticker: false,
-    badge: 'Self-Print Instant',
+    validityDays: 365,
     features: [
-      '1 Vehicle protected for 1 full year',
-      'Instant printable QR sticker PDF/PNG',
-      'Unlimited scan alerts & 1-tap quick replies',
-      'Private anonymous voice calls (3/day)',
+      'Register 1 vehicle (Car or Bike)',
+      'Instant self-print QR windshield sticker',
+      'Unlimited anonymous push alerts & WebRTC calls',
+      'Valid for 1 full year (365 days)',
     ],
   },
   PLUS_299: {
     id: 'PLUS_299',
-    name: 'WHO PARK Plus (3 Vehicles + 1 Sticker Delivered • 1 Year)',
-    shortName: 'Plus • 3 Vehicles + 1 Delivered',
+    badge: 'Most Popular',
+    shortName: 'WHO PARK Plus + Sticker',
     priceInr: 299,
-    amountPaise: 29900,
     maxVehicles: 3,
     includesPhysicalSticker: true,
-    badge: 'Most Popular • Free Delivery',
+    validityDays: 365,
     features: [
-      'Up to 3 Vehicles protected for 1 full year',
-      '1 Weather-proof QR sticker delivered to your address',
-      'Self-print stickers included for all 3 vehicles',
-      'Keep same sticker on renewal — zero re-sticking',
+      'Register up to 3 family vehicles',
+      '1 weather-proof physical QR sticker delivered free',
+      'Instant self-print QRs for all 3 vehicles',
+      'Unlimited anonymous alerts & calls for 1 year',
     ],
   },
   BUSINESS_999: {
     id: 'BUSINESS_999',
-    name: 'WHO PARK Business Fleet (30 Vehicles • 1 Year)',
-    shortName: 'Business • 30 Vehicles',
+    badge: 'Business / Fleet',
+    shortName: 'WHO PARK Business (10 Vehicles)',
     priceInr: 999,
-    amountPaise: 99900,
     maxVehicles: 10,
     includesPhysicalSticker: false,
-    badge: 'Fleet / Society / Commercial',
+    validityDays: 365,
     features: [
-      'Up to 30 Vehicles under one admin account',
-      '1 full year validity (just ₹33/vehicle/year)',
-      'Instant printable QR stickers for entire fleet',
-      'Centralized alert & call logs across all vehicles',
+      'Register up to 10 fleet or society vehicles',
+      'Self-print QR stickers for all 10 vehicles',
+      'Centralized alert & call dashboard',
+      'Valid for 1 full year (365 days)',
     ],
   },
 };
@@ -79,7 +74,7 @@ export function isPlanActive(user: {
   plan?: string | null;
   planExpiresAt?: Date | string | null;
 }): boolean {
-  if (!user?.plan || user.plan === 'NONE' || user.plan === 'FREE') return false;
+  if (!user.plan || user.plan === 'NONE') return false;
   if (!user.planExpiresAt) return false;
   return new Date(user.planExpiresAt).getTime() > Date.now();
 }
@@ -89,18 +84,16 @@ export function getAllowedVehicleLimit(user: {
   planExpiresAt?: Date | string | null;
 }): number {
   if (!isPlanActive(user)) return 0;
-  const cfg = PLANS[user.plan as PlanType];
-  return cfg ? cfg.maxVehicles : 0;
+  const planKey = user.plan as PlanType;
+  return PLANS[planKey]?.maxVehicles ?? 0;
 }
 
-/**
- * Extends expiry by 365 days from current expiry (if active) or from today (if expired/new),
- * so users upgrading mid-year from ₹199 -> ₹299 never lose remaining days.
- */
-export function computeNewExpiryDate(currentExpiresAt?: Date | string | null): Date {
-  const oneYearMs = 365 * 24 * 60 * 60 * 1000;
+export function computeNewExpiryDate(
+  currentExpiresAt?: Date | string | null,
+  validityDays = 365
+): Date {
   const now = Date.now();
-  const existing = currentExpiresAt ? new Date(currentExpiresAt).getTime() : 0;
-  const baseTime = existing > now ? existing : now;
-  return new Date(baseTime + oneYearMs);
+  const existingTime = currentExpiresAt ? new Date(currentExpiresAt).getTime() : 0;
+  const baseTime = existingTime > now ? existingTime : now;
+  return new Date(baseTime + validityDays * 24 * 60 * 60 * 1000);
 }
