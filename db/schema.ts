@@ -66,6 +66,7 @@ export const callLogs = pgTable('call_logs', {
   tagSlug: varchar('tag_slug', { length: 32 }).notNull(),
   scannerHash: varchar('scanner_hash', { length: 128 }).notNull(),
   callDateIst: varchar('call_date_ist', { length: 16 }).notNull(),
+  status: varchar('status', { length: 30 }).default('INITIATED'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
