@@ -1,6 +1,9 @@
 {
+  "/admin/login/page": "app/admin/login/page.js",
   "/admin/page": "app/admin/page.js",
   "/api/admin/bulk-qr/route": "app/api/admin/bulk-qr/route.js",
+  "/api/admin/logout/route": "app/api/admin/logout/route.js",
+  "/api/admin/orders/route": "app/api/admin/orders/route.js",
   "/api/admin/stats/route": "app/api/admin/stats/route.js",
   "/api/auth/google/route": "app/api/auth/google/route.js",
   "/api/auth/logout/route": "app/api/auth/logout/route.js",
