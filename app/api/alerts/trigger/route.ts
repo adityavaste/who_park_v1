@@ -1,10 +1,11 @@
 // app/api/alerts/trigger/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { alertLogs, qrTags, vehicles } from '@/db/schema';
+import { alertLogs, qrTags, users, vehicles } from '@/db/schema';
 import { eq, and, gt, desc } from 'drizzle-orm';
 import { sendPushToOwner } from '@/lib/sendPush';
 import { purgeExpiredRecords } from '@/lib/cleanupDb';
+import { isPlanActive } from '@/lib/plans';
 
 const ALERT_LABELS: Record<string, string> = {
   OBSTRUCTION: '🚗 Your car is blocking someone!',
@@ -23,16 +24,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. Resolve tag + vehicle + owner userId
+    // 1. Resolve tag + vehicle + owner plan status
     const [record] = await db
       .select({
         tagId: qrTags.id,
         isEnabled: qrTags.isEnabled,
         plateNumber: vehicles.plateNumber,
         ownerUserId: vehicles.userId,
+        ownerPlan: users.plan,
+        ownerPlanExpiresAt: users.planExpiresAt,
       })
       .from(qrTags)
       .innerJoin(vehicles, eq(qrTags.vehicleId, vehicles.id))
+      .innerJoin(users, eq(vehicles.userId, users.id))
       .where(eq(qrTags.publicSlug, slug))
       .limit(1);
 
@@ -43,6 +47,18 @@ export async function POST(req: NextRequest) {
     if (!record.isEnabled) {
       return NextResponse.json(
         { error: 'This QR sticker is currently paused by the owner.' },
+        { status: 403 }
+      );
+    }
+
+    // Pause alerts if owner's 1-year subscription has expired (keeps sticker & vehicle intact)
+    if (!isPlanActive({ plan: record.ownerPlan, planExpiresAt: record.ownerPlanExpiresAt })) {
+      return NextResponse.json(
+        {
+          error:
+            'This vehicle’s WHO PARK subscription has expired. The owner needs to renew their plan to receive live alerts.',
+          planExpired: true,
+        },
         { status: 403 }
       );
     }

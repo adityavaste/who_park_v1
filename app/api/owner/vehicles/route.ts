@@ -5,6 +5,7 @@ import { db } from '@/db';
 import { vehicles, qrTags, alertLogs, users } from '@/db/schema';
 import { eq, desc, inArray, and, gte } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
+import { getAllowedVehicleLimit, isPlanActive } from '@/lib/plans';
 
 export async function GET() {
   try {
@@ -57,9 +58,19 @@ export async function GET() {
         .limit(20);
     }
 
+    const activePlan = isPlanActive(user || {});
+    const maxVehicles = getAllowedVehicleLimit(user || {});
+
     const response = NextResponse.json({
       success: true,
-      user: { phone: session.phone, fullName: user?.fullName || null },
+      user: {
+        phone: session.phone,
+        fullName: user?.fullName || null,
+        plan: user?.plan || 'NONE',
+        planExpiresAt: user?.planExpiresAt || null,
+        isPlanActive: activePlan,
+        maxVehicles,
+      },
       vehicles: userVehicles,
       alerts,
     });

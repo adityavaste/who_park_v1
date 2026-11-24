@@ -1,12 +1,33 @@
-{"timestamp":"00:00:00.850","source":"Server","level":"LOG","message":"- Cache Components enabled"}
-{"timestamp":"00:00:00.850","source":"Server","level":"LOG","message":"- Partial Prefetching enabled"}
-{"timestamp":"00:00:00.851","source":"Server","level":"LOG","message":"- Experiments (use with caution):"}
-{"timestamp":"00:00:00.851","source":"Server","level":"LOG","message":"  ✓ agentFeedback"}
-{"timestamp":"00:00:00.851","source":"Server","level":"LOG","message":""}
-{"timestamp":"00:00:08.909","source":"Server","level":"LOG","message":"○ Compiling / ..."}
-{"timestamp":"00:00:12.087","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
-{"timestamp":"00:00:24.718","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
-{"timestamp":"00:03:08.000","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
-{"timestamp":"00:03:20.462","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
-{"timestamp":"00:06:11.131","source":"Server","level":"LOG","message":"✓ Compiled in 590ms"}
-{"timestamp":"00:07:19.694","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:00:05.816","source":"Server","level":"LOG","message":"- Cache Components enabled"}
+{"timestamp":"00:00:05.817","source":"Server","level":"LOG","message":"- Partial Prefetching enabled"}
+{"timestamp":"00:00:05.817","source":"Server","level":"LOG","message":"- Experiments (use with caution):"}
+{"timestamp":"00:00:05.817","source":"Server","level":"LOG","message":"  ✓ agentFeedback"}
+{"timestamp":"00:00:05.817","source":"Server","level":"LOG","message":""}
+{"timestamp":"00:00:18.542","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:01:03.701","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:01:31.562","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:07:39.581","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:07:44.685","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:08:03.459","source":"Server","level":"ERROR","message":"[GOOGLE AUTH ERROR] Error: Failed query: select \"id\", \"email\", \"phone\", \"full_name\", \"password\", \"plan\", \"plan_expires_at\", \"is_active\", \"created_at\" from \"users\" where \"users\".\"email\" = $1 limit $2\nparams: adityavaste@gmail.com,1"}
+{"timestamp":"00:08:22.832","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:08:50.829","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:09:09.685","source":"Server","level":"ERROR","message":"[GOOGLE AUTH ERROR] Error: Failed query: select \"id\", \"email\", \"phone\", \"full_name\", \"password\", \"plan\", \"plan_expires_at\", \"is_active\", \"created_at\" from \"users\" where \"users\".\"email\" = $1 limit $2\nparams: adityavaste@gmail.com,1"}
+{"timestamp":"00:12:24.471","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:18:03.520","source":"Server","level":"LOG","message":"✓ Compiled in 253ms"}
+{"timestamp":"00:21:47.045","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:21:54.899","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:23:53.549","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:28:00.391","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:28:01.430","source":"Browser","level":"ERROR","message":"Uncaught ReferenceError: user is not defined\n    at DashboardPage (app/dashboard/page.tsx:720:10)\n  \u001b[90m718 |\u001b[0m     <div className=\u001b[32m\"flex items-center gap-2\"\u001b[0m>\n  \u001b[90m719 |\u001b[0m       <span className=\u001b[32m\"bg-yellow-300 border-2 border-black px-2.5 py-0.5 rounded-f...\u001b[0m\n\u001b[31m\u001b[1m>\u001b[0m \u001b[90m720 |\u001b[0m         {user?.isPlanActive ? \u001b[32m`✅ \u001b[0m${user.plan\u001b[32m} ACTIVE`\u001b[0m : \u001b[32m'⚠️ NO ACTIVE PLAN'\u001b[0m}\n  \u001b[90m    |\u001b[0m          \u001b[31m\u001b[1m^\u001b[0m\n  \u001b[90m721 |\u001b[0m       </span>\n  \u001b[90m722 |\u001b[0m       {user?.isPlanActive && (\n  \u001b[90m723 |\u001b[0m         <span className=\u001b[32m\"text-xs font-black text-stone-600\"\u001b[0m>"}
+{"timestamp":"00:28:01.432","source":"Server","level":"ERROR","message":"[browser] \"\\u001b[31mUncaught ReferenceError: user is not defined\\u001b[39m\\n\\u001b[31m    at DashboardPage (app/dashboard/page.tsx:720:10)\\u001b[39m\\n  \\u001b[90m718 |\\u001b[0m     <div className=\\u001b[32m\\\"flex items-center gap-2\\\"\\u001b[0m>\\n  \\u001b[90m719 |\\u001b[0m       <span className=\\u001b[32m\\\"bg-yellow-300 border-2 border-black px-2.5 py-0.5 rounded-f...\\u001b[0m\\n\\u001b[31m\\u001b[1m>\\u001b[0m \\u001b[90m720 |\\u001b[0m         {user?.isPlanActive ? \\u001b[32m`✅ \\u001b[0m${user.plan\\u001b[32m} ACTIVE`\\u001b[0m : \\u001b[32m'⚠️ NO ACTIVE PLAN'\\u001b[0m}\\n  \\u001b[90m    |\\u001b[0m          \\u001b[31m\\u001b[1m^\\u001b[0m\\n  \\u001b[90m721 |\\u001b[0m       </span>\\n  \\u001b[90m722 |\\u001b[0m       {user?.isPlanActive && (\\n  \\u001b[90m723 |\\u001b[0m         <span className=\\u001b[32m\\\"text-xs font-black text-stone-600\\\"\\u001b[0m>\""}
+{"timestamp":"00:31:02.645","source":"Server","level":"LOG","message":"✓ Compiled in 519ms"}
+{"timestamp":"00:31:02.656","source":"Server","level":"WARN","message":"⚠ Fast Refresh had to perform a full reload due to a runtime error."}
+{"timestamp":"00:31:03.075","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:32:50.153","source":"Server","level":"LOG","message":"  Reload env: .env.local"}
+{"timestamp":"00:36:22.041","source":"Server","level":"LOG","message":"  Reload env: .env.local"}
+{"timestamp":"00:36:31.223","source":"Server","level":"LOG","message":"  Reload env: .env.local"}
+{"timestamp":"00:42:13.584","source":"Server","level":"LOG","message":"  Reload env: .env.local"}
+{"timestamp":"00:42:43.035","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:45:57.079","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:47:44.103","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:52:52.908","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}

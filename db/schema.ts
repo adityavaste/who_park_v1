@@ -1,6 +1,5 @@
 // db/schema.ts
-// db/schema.ts (line 2)
-import { pgTable, uuid, varchar, boolean, timestamp, text, integer, serial, index } from 'drizzle-orm/pg-core';// db/schema.ts
+import { pgTable, uuid, varchar, boolean, timestamp, text, integer } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -8,6 +7,8 @@ export const users = pgTable('users', {
   phone: varchar('phone', { length: 15 }).notNull().unique(),
   fullName: varchar('full_name', { length: 100 }),
   password: varchar('password', { length: 255 }),
+  plan: varchar('plan', { length: 30 }).default('NONE').notNull(), // 'NONE' | 'BASIC_199' | 'PLUS_299' | 'BUSINESS_999'
+  planExpiresAt: timestamp('plan_expires_at', { withTimezone: true }),
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
@@ -22,12 +23,11 @@ export const vehicles = pgTable('vehicles', {
   qrDownloads: integer('qr_downloads').default(0).notNull(),
 });
 
-// Inside db/schema.ts -> update qrTags table
 export const qrTags = pgTable('qr_tags', {
   id: uuid('id').defaultRandom().primaryKey(),
-  vehicleId: uuid('vehicle_id').references(() => vehicles.id, { onDelete: 'cascade' }), // nullable until claimed!
+  vehicleId: uuid('vehicle_id').references(() => vehicles.id, { onDelete: 'cascade' }),
   publicSlug: varchar('public_slug', { length: 32 }).notNull().unique(),
-  batchName: varchar('batch_name', { length: 100 }), // e.g., "Ratan Neptune CHS - 50"
+  batchName: varchar('batch_name', { length: 100 }),
   isEnabled: boolean('is_enabled').default(true),
   claimedAt: timestamp('claimed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
@@ -61,22 +61,30 @@ export const callSessions = pgTable('call_sessions', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
-export const callLogs = pgTable(
-  'call_logs',
-  {
-    id: serial('id').primaryKey(),
-    tagSlug: text('tag_slug').notNull(),
-    scannerHash: text('scanner_hash').notNull(),
-    callDateIst: text('call_date_ist').notNull(), // e.g., "2026-11-19"
-    durationSeconds: integer('duration_seconds').default(0).notNull(),
-    status: text('status').default('initiated').notNull(), // 'initiated' | 'connected' | 'ended'
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-  },
-  (table) => ({
-    tagScannerDayIdx: index('tag_scanner_day_idx').on(
-      table.tagSlug,
-      table.scannerHash,
-      table.callDateIst
-    ),
-  })
-);
+export const payments = pgTable('payments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  razorpayOrderId: varchar('razorpay_order_id', { length: 100 }).notNull().unique(),
+  razorpayPaymentId: varchar('razorpay_payment_id', { length: 100 }),
+  planType: varchar('plan_type', { length: 30 }).notNull(), // 'BASIC_199' | 'PLUS_299' | 'BUSINESS_999'
+  amountInr: integer('amount_inr').notNull(),
+  status: varchar('status', { length: 20 }).default('CREATED').notNull(), // 'CREATED' | 'PAID' | 'FAILED'
+  shippingSnapshot: text('shipping_snapshot'), // JSON string for PLUS_299 Option A delivery address
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const stickerOrders = pgTable('sticker_orders', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'cascade' }).notNull(),
+  plateNumber: varchar('plate_number', { length: 30 }),
+  recipientName: varchar('recipient_name', { length: 100 }).notNull(),
+  recipientPhone: varchar('recipient_phone', { length: 15 }).notNull(),
+  addressLine: text('address_line').notNull(),
+  city: varchar('city', { length: 80 }).notNull(),
+  state: varchar('state', { length: 80 }).notNull(),
+  pincode: varchar('pincode', { length: 10 }).notNull(),
+  dispatchStatus: varchar('dispatch_status', { length: 30 }).default('PENDING_DISPATCH').notNull(), // 'PENDING_DISPATCH' | 'SHIPPED' | 'DELIVERED'
+  trackingNumber: varchar('tracking_number', { length: 100 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
