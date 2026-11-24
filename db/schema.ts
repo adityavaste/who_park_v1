@@ -61,6 +61,14 @@ export const callSessions = pgTable('call_sessions', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
+export const callLogs = pgTable('call_logs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tagSlug: varchar('tag_slug', { length: 32 }).notNull(),
+  callerHash: varchar('caller_hash', { length: 128 }).notNull(),
+  dateKey: varchar('date_key', { length: 16 }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
 export const payments = pgTable('payments', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
