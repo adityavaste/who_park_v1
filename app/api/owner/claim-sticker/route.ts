@@ -2,8 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { db } from '@/db';
-import { qrTags, vehicles } from '@/db/schema';
+import { qrTags, users, vehicles } from '@/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
+import { getAllowedVehicleLimit } from '@/lib/plans';
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -36,7 +37,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Check if user already registered this plate number or create new vehicle
+    // 2. Check user's active plan & vehicle limit
+    const [currentUser] = await db
+      .select({ plan: users.plan, planExpiresAt: users.planExpiresAt })
+      .from(users)
+      .where(eq(users.id, session.userId))
+      .limit(1);
+
+    const maxAllowed = getAllowedVehicleLimit(currentUser || {});
+    if (maxAllowed === 0) {
+      return NextResponse.json(
+        {
+          error: 'Please activate a WHO PARK plan (starting at ₹199/year) before activating a sticker.',
+          upgradeRequired: true,
+        },
+        { status: 403 }
+      );
+    }
+
+    // 3. Check if user already registered this plate number or create new vehicle
     let [vehicle] = await db
       .select()
       .from(vehicles)
@@ -51,6 +70,21 @@ export async function POST(req: NextRequest) {
     }
 
     if (!vehicle) {
+      const existingVehicles = await db
+        .select({ id: vehicles.id })
+        .from(vehicles)
+        .where(eq(vehicles.userId, session.userId));
+
+      if (existingVehicles.length >= maxAllowed) {
+        return NextResponse.json(
+          {
+            error: `Your current plan allows up to ${maxAllowed} vehicle(s). Upgrade your plan to add more!`,
+            upgradeRequired: true,
+          },
+          { status: 403 }
+        );
+      }
+
       [vehicle] = await db
         .insert(vehicles)
         .values({
@@ -62,7 +96,7 @@ export async function POST(req: NextRequest) {
         .returning();
     }
 
-    // 3. Link the pre-printed QR tag to this vehicle
+    // 4. Link the pre-printed QR tag to this vehicle
     await db
       .update(qrTags)
       .set({

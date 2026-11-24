@@ -45,6 +45,15 @@ interface IncomingCallItem {
   offerSdp: string;
 }
 
+interface UserProfileInfo {
+  phone: string;
+  fullName: string | null;
+  plan?: string;
+  planExpiresAt?: string | null;
+  isPlanActive?: boolean;
+  maxVehicles?: number;
+}
+
 const QUICK_REPLIES = [
   '🏃 Coming in 2 mins!',
   '⏳ Wait, I am nearby',
@@ -66,7 +75,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [userInfo, setUserInfo] = useState<{ phone: string; fullName: string | null } | null>(null);
+  const [userInfo, setUserInfo] = useState<UserProfileInfo | null>(null);
 
   // Anonymous WebRTC Call States & Refs
   const [incomingCall, setIncomingCall] = useState<IncomingCallItem | null>(null);
@@ -441,7 +450,7 @@ export default function DashboardPage() {
     const authHeaders = getAuthHeaders();
 
     try {
-      // 1. Check incoming calls in background (non-blocking so it never freezes dashboard load)
+      // 1. Check incoming calls in background
       if (ownerCallStatusRef.current === 'IDLE') {
         fetch(`/api/calls?t=${Date.now()}`, {
           credentials: 'include',
@@ -471,7 +480,7 @@ export default function DashboardPage() {
           .catch(() => {});
       }
 
-      // 2. Fetch owner vehicles & alerts immediately with 8s timeout + token fallback
+      // 2. Fetch owner vehicles & alerts
       const res = await fetch(`/api/owner/vehicles?t=${Date.now()}`, {
         credentials: 'include',
         cache: 'no-store',
@@ -570,6 +579,14 @@ export default function DashboardPage() {
     }
   }
 
+  function handleOpenAddVehicle() {
+    if (!userInfo?.isPlanActive || vehiclesList.length >= (userInfo?.maxVehicles || 0)) {
+      router.push('/upgrade');
+      return;
+    }
+    setShowAddModal(true);
+  }
+
   async function handleAddVehicle(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
@@ -594,6 +611,9 @@ export default function DashboardPage() {
         setNewModel('');
         setNewEmergency('');
         loadDashboardData(false);
+      } else if (res.status === 403 && data.upgradeRequired) {
+        setShowAddModal(false);
+        router.push('/upgrade');
       } else {
         alert(data.error || 'Failed to add vehicle');
       }
@@ -710,6 +730,34 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Subscription Status & Upgrade / Renew Banner */}
+        <div className="mb-6 bg-white border-2 border-neutral-950 rounded-2xl p-4 shadow-[4px_4px_0px_#0a0a0a] flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="bg-yellow-300 border-2 border-neutral-950 px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase">
+                {userInfo?.isPlanActive ? `✅ ${userInfo.plan} ACTIVE` : '⚠️ NO ACTIVE PLAN'}
+              </span>
+              {userInfo?.isPlanActive && (
+                <span className="text-xs font-black text-stone-600">
+                  ({vehiclesList.length} / {userInfo.maxVehicles} Vehicles Used)
+                </span>
+              )}
+            </div>
+            <p className="text-xs font-bold text-stone-600 mt-1">
+              {userInfo?.isPlanActive && userInfo?.planExpiresAt
+                ? `Valid until ${new Date(userInfo.planExpiresAt).toLocaleDateString('en-IN')} • Renew anytime without changing your sticker`
+                : 'Activate a 1-year plan (₹199 / ₹299 / ₹999) to register your vehicle & receive live alerts.'}
+            </p>
+          </div>
+
+          <Link
+            href="/upgrade"
+            className="bg-yellow-400 hover:bg-yellow-300 border-2 border-neutral-950 font-black text-xs px-4 py-2.5 rounded-xl shadow-[3px_3px_0px_#0a0a0a] transition"
+          >
+            {userInfo?.isPlanActive ? '⚡ Upgrade / Renew Plan' : '🚀 Activate Plan →'}
+          </Link>
+        </div>
+
         {/* Driver Profile & Quick Stats Card */}
         <header className="bg-white border-2 border-neutral-950 p-5 sm:p-6 rounded-3xl shadow-[6px_6px_0px_#0a0a0a] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -731,7 +779,7 @@ export default function DashboardPage() {
           </div>
 
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={handleOpenAddVehicle}
             className="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-300 active:translate-y-0.5 text-neutral-950 font-black text-sm px-5 py-3 rounded-2xl border-2 border-neutral-950 shadow-[4px_4px_0px_#0a0a0a] transition"
           >
             + Add Vehicle
@@ -757,7 +805,7 @@ export default function DashboardPage() {
                 Add your car or bike plate number to generate your private windshield QR sticker.
               </p>
               <button
-                onClick={() => setShowAddModal(true)}
+                onClick={handleOpenAddVehicle}
                 className="mt-4 inline-block bg-yellow-400 hover:bg-yellow-300 text-neutral-950 font-bold text-xs px-5 py-2.5 rounded-xl border-2 border-neutral-950 shadow-[3px_3px_0px_#0a0a0a]"
               >
                 + Register First Vehicle

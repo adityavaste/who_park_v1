@@ -207,15 +207,21 @@ useEffect(() => {
       </section>
 
       {/* Clean Footer */}
-      <footer className="max-w-4xl w-full mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-neutral-500 font-medium pt-4">
-        <span>© 2026 WHO PARK • Privacy-First Vehicle Alerts</span>
-        <Link
-          href="/parking-solutions"
-          className="font-bold text-neutral-800 hover:text-black underline"
-        >
-          Parking Solutions & FAQ
-        </Link>
-      </footer>
+     <footer className="mt-16 border-t-2 border-neutral-950 bg-white py-8 px-4">
+  <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs font-bold text-neutral-800">
+    <Link href="/privacy-policy" className="hover:underline">Privacy Policy</Link>
+    <Link href="/terms" className="hover:underline">Terms &amp; Conditions</Link>
+    <Link href="/refund-policy" className="hover:underline">Refund &amp; Cancellation</Link>
+    <Link href="/shipping-policy" className="hover:underline">Shipping Policy</Link>
+    <Link href="/disclaimer" className="hover:underline">Disclaimer</Link>
+    <Link href="/contact" className="hover:underline">Contact Us</Link>
+    <Link href="/delete-account" className="hover:underline">Delete Account</Link>
+  </div>
+  <p className="text-center text-xs text-neutral-500 font-semibold mt-4">
+    © 2026 WHO PARK • Pune, Maharashtra, India.
+  
+  </p>
+</footer>
 
       {/* Live Camera QR Scanner Modal */}
       <QrScannerModal

@@ -122,23 +122,23 @@ __turbopack_context__.s([
 ]);
 function manifest() {
     return {
-        name: 'Who Park — Smart Car Parking Alert',
-        short_name: 'Who Park',
-        description: 'Scan windshield QR to alert parked car owners privately without sharing phone numbers.',
-        start_url: '/dashboard',
-        display: 'standalone',
-        background_color: '#FFFDF0',
-        theme_color: '#FACC15',
-        icons: [
+        "name": "WHO PARK — Private Vehicle QR Alerts",
+        "short_name": "WHO PARK",
+        "description": "Scan vehicle QR stickers to alert owners privately without sharing phone numbers.",
+        "start_url": "/dashboard",
+        "display": "standalone",
+        "background_color": "#FFFDF0",
+        "theme_color": "#FACC15",
+        "icons": [
             {
-                src: '/api/pwa-icon/192',
-                sizes: '192x192',
-                type: 'image/png'
+                "src": "/icon-192x192.png",
+                "sizes": "192x192",
+                "type": "image/png"
             },
             {
-                src: '/api/pwa-icon/512',
-                sizes: '512x512',
-                type: 'image/png'
+                "src": "/icon-512x512.png",
+                "sizes": "512x512",
+                "type": "image/png"
             }
         ]
     };
