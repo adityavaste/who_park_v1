@@ -47,6 +47,10 @@ export default function UpgradePage() {
     setLoadingPay(true);
 
     try {
+      if (typeof window === 'undefined' || !window.Razorpay) {
+        throw new Error('Payment gateway is still loading. Please wait 2 seconds and tap Pay again.');
+      }
+
       const payload: any = { planType: selectedPlan };
       if (selectedPlan === 'PLUS_299') {
         payload.shipping = {
@@ -130,7 +134,7 @@ export default function UpgradePage() {
 
   return (
     <main className="min-h-screen bg-[#FFFDF0] py-8 px-4 text-black selection:bg-yellow-300">
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
 
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
@@ -223,8 +227,8 @@ export default function UpgradePage() {
               </h3>
               <p className="text-xs font-bold text-neutral-600">
                 {activePlanObj.includesPhysicalSticker
-                  ? '📦 Includes 1 weather-proof physical sticker delivered to your doorstep + instant digital access for 3 vehicles.'
-                  : '🖨️ Instant digital activation — download & print your QR stickers immediately after payment.'}
+                  ? `📦 Includes 1 weather-proof physical sticker delivered to your doorstep + instant digital access for ${activePlanObj.maxVehicles} vehicles.`
+                  : `🖨️ Instant digital activation for up to ${activePlanObj.maxVehicles} ${activePlanObj.maxVehicles === 1 ? 'vehicle' : 'vehicles'} — download & print your QR stickers immediately after payment.`}
               </p>
             </div>
             <div className="text-2xl font-black font-mono bg-yellow-300 border-2 border-black px-3 py-1 rounded-xl">

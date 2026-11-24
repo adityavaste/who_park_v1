@@ -1,7 +1,6 @@
 // src/lib/activateSubscription.ts
 import { db } from '@/db';
 import { payments, stickerOrders, users } from '@/db/schema';
-import { computeNewExpiryDate, ShippingAddressInput } from '@/lib/plans';
 import { eq } from 'drizzle-orm';
 
 export async function activatePaidOrder(
