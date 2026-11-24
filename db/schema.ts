@@ -64,8 +64,8 @@ export const callSessions = pgTable('call_sessions', {
 export const callLogs = pgTable('call_logs', {
   id: uuid('id').defaultRandom().primaryKey(),
   tagSlug: varchar('tag_slug', { length: 32 }).notNull(),
-  callerHash: varchar('caller_hash', { length: 128 }).notNull(),
-  dateKey: varchar('date_key', { length: 16 }).notNull(),
+  scannerHash: varchar('scanner_hash', { length: 128 }).notNull(),
+  callDateIst: varchar('call_date_ist', { length: 16 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
