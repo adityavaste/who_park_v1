@@ -3,9 +3,11 @@ export type PlanType = 'BASIC_199' | 'PLUS_299' | 'BUSINESS_999';
 
 export interface PlanConfig {
   id: PlanType;
+  name: string;
   badge: string;
   shortName: string;
   priceInr: number;
+  amountPaise: number;
   maxVehicles: number;
   includesPhysicalSticker: boolean;
   validityDays: number;
@@ -25,9 +27,11 @@ export interface ShippingAddressInput {
 export const PLANS: Record<PlanType, PlanConfig> = {
   BASIC_199: {
     id: 'BASIC_199',
+    name: 'WHO PARK Essential (1 Year • 1 Vehicle)',
     badge: 'Essential',
     shortName: 'WHO PARK Essential',
     priceInr: 199,
+    amountPaise: 19900,
     maxVehicles: 1,
     includesPhysicalSticker: false,
     validityDays: 365,
@@ -40,9 +44,11 @@ export const PLANS: Record<PlanType, PlanConfig> = {
   },
   PLUS_299: {
     id: 'PLUS_299',
+    name: 'WHO PARK Plus + Physical Sticker (1 Year • 3 Vehicles)',
     badge: 'Most Popular',
     shortName: 'WHO PARK Plus + Sticker',
     priceInr: 299,
+    amountPaise: 29900,
     maxVehicles: 3,
     includesPhysicalSticker: true,
     validityDays: 365,
@@ -55,9 +61,11 @@ export const PLANS: Record<PlanType, PlanConfig> = {
   },
   BUSINESS_999: {
     id: 'BUSINESS_999',
+    name: 'WHO PARK Business Fleet (1 Year • 10 Vehicles)',
     badge: 'Business / Fleet',
     shortName: 'WHO PARK Business (10 Vehicles)',
     priceInr: 999,
+    amountPaise: 99900,
     maxVehicles: 10,
     includesPhysicalSticker: false,
     validityDays: 365,
