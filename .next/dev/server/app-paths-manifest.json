@@ -1,12 +1,10 @@
 {
-  "/admin/bulk-print/page": "app/admin/bulk-print/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/admin/page": "app/admin/page.js",
-  "/api/admin/bulk-qr/route": "app/api/admin/bulk-qr/route.js",
-  "/api/admin/stats/route": "app/api/admin/stats/route.js",
   "/api/owner/vehicles/route": "app/api/owner/vehicles/route.js",
-  "/claim/[slug]/page": "app/claim/[slug]/page.js",
+  "/apple-icon/route": "app/apple-icon/route.js",
   "/icon-192x192.png/route": "app/icon-192x192.png/route.js",
-  "/login/page": "app/login/page.js",
+  "/icon/[__metadata_id__]/route": "app/icon/[__metadata_id__]/route.js",
   "/manifest.webmanifest/route": "app/manifest.webmanifest/route.js",
   "/page": "app/page.js"
 }

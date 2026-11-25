@@ -1,6 +1,1 @@
-{
-  "version": 4,
-  "routes": {},
-  "dynamicRoutes": {},
-  "notFoundRoutes": []
-}
+{"version":4,"routes":{"/icon/small":{},"/icon/medium":{},"/icon/large":{}},"dynamicRoutes":{"/icon/[__metadata_id__]":{"dataRoute":null,"dataRouteRegex":null,"fallback":null,"fallbackRevalidate":false,"fallbackSourceRoute":"/icon/[__metadata_id__]","routeRegex":"^\\/icon\\/([^/]+?)(?:\\/)?$","allowHeader":[]}},"notFoundRoutes":[]}

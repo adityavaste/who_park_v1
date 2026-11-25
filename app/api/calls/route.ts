@@ -1,10 +1,11 @@
 // app/api/calls/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { callSessions, qrTags, vehicles } from '@/db/schema';
+import { callSessions, qrTags, users, vehicles } from '@/db/schema';
 import { eq, and, gt, desc } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
 import { sendPushToOwner } from '@/lib/sendPush';
+import { isPlanActive } from '@/lib/plans';
 
 // POST: Scanner initiates an anonymous WebRTC call (stores SDP Offer & sends background push)
 export async function POST(req: NextRequest) {
@@ -21,9 +22,12 @@ export async function POST(req: NextRequest) {
         isEnabled: qrTags.isEnabled,
         plateNumber: vehicles.plateNumber,
         ownerUserId: vehicles.userId,
+        ownerPlan: users.plan,
+        ownerPlanExpiresAt: users.planExpiresAt,
       })
       .from(qrTags)
       .innerJoin(vehicles, eq(qrTags.vehicleId, vehicles.id))
+      .innerJoin(users, eq(vehicles.userId, users.id))
       .where(eq(qrTags.publicSlug, slug))
       .limit(1);
 
@@ -31,6 +35,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Vehicle sticker is inactive or not found' },
         { status: 404 }
+      );
+    }
+
+    // Pause anonymous calls if owner's 1-year subscription has expired
+    if (!isPlanActive({ plan: record.ownerPlan, planExpiresAt: record.ownerPlanExpiresAt })) {
+      return NextResponse.json(
+        {
+          error:
+            'This vehicle’s WHO PARK subscription has expired. The owner needs to renew their plan to receive calls.',
+          planExpired: true,
+        },
+        { status: 403 }
       );
     }
 
