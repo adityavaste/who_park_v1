@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 76, "column": 0}, "map": {"version":3,"sources":["file:///home/aditya/projects/who-parkv2/app/api/auth/logout/route.ts"],"sourcesContent":["import { NextResponse } from 'next/server';\n\nexport async function POST() {\n  const response = NextResponse.json({ success: true });\n  response.cookies.delete('session_token');\n  return response;\n}"],"names":["POST","response","json","success","cookies","delete"],"mappings":";;;;AAAA;;AAEO,eAAeA;IACpB,MAAMC,WAAW,gJAAY,CAACC,IAAI,CAAC;QAAEC,SAAS;IAAK;IACnDF,SAASG,OAAO,CAACC,MAAM,CAAC;IACxB,OAAOJ;AACT"}}]
-}

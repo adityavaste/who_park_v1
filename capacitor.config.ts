@@ -1,4 +1,3 @@
-// capacitor.config.ts
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
@@ -6,25 +5,20 @@ const config: CapacitorConfig = {
   appName: 'WHO PARK',
   webDir: 'public',
   server: {
-    url: 'https://www.whopark.in/',
+    url: 'https://app.whopark.in',
     cleartext: false,
     allowNavigation: [
-      'www.whopark.in',
+      'app.whopark.in',
       'whopark.in',
       '*.whopark.in',
-      '*.vercel.app',
+      '*.firebaseapp.com',
+      'accounts.google.com',
     ],
   },
   plugins: {
-    CapacitorCookies: {
-      enabled: true,
-    },
     FirebaseAuthentication: {
       skipNativeAuth: false,
       providers: ['google.com'],
-    },
-    PushNotifications: {
-      presentationOptions: ['badge', 'sound', 'alert'],
     },
   },
 };
